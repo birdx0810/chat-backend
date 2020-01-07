@@ -1,5 +1,4 @@
 # -*- coding: UTF-8 -*-
-
 # Import 3rd-Party Dependencies
 from flask import (
     Flask, escape, request, redirect, url_for
@@ -19,7 +18,7 @@ from linebot.models import (
 import sys, os
 
 # Import local modules
-import db, session
+import database, session, utilities, responder
 
 # Initialize Flask
 app = Flask(__name__)
@@ -27,9 +26,10 @@ app = Flask(__name__)
 # Initialize Session
 session = session.Session()
 
-# Channel API & Webhook
-line_bot_api = LineBotApi('ziOmFT6dChd1K/l4IlRUfe37gYQ9aFiLHsnKi/ukJr5UDcqzh7bgU/i8MBqrqULyuXbHmSdQPAqRWjAciP2IZgrvLoF3ZH2C2Hg+zZMgoy/4W0Ahb7g7l9T7AbQqlNqsVFCJHSCyHOJH6HBT5ccxAgdB04t89/1O/w1cDnyilFU=') # Channel Access Token
-handler = WebhookHandler('fabfd7538c098fe222e8012e1df65740') # Channel Secret
+# Channel Access Token
+line_bot_api = LineBotApi('XEQclTuSIm6/pcNNB4W9a2DDX/KAbCBmZS4ltBl+g8q2IxwJyqdtgNNY9KtJJxfkuXbHmSdQPAqRWjAciP2IZgrvLoF3ZH2C2Hg+zZMgoy/xM/RbnoFa2eO9GV2F4E1qmjYxA0FbJm1uZkUms9o+4QdB04t89/1O/w1cDnyilFU=')
+# Channel Secret
+handler = WebhookHandler('fabfd7538c098fe222e8012e1df65740') 
 
 # Listen to all POST requests from HOST/callback
 @app.route("/callback", methods=['POST'])
@@ -61,38 +61,15 @@ def handle_message(event):
     print(f'User: {userid}')
     print(f'Message: {usermsg}')
 
-    print(f'User status:{session.status}')
-
     # Check user status
-    stat = db.check_user(userid, usermsg, session)
+    stat = session.get_status(userid)
+    print(f'Status:{stat}')
 
-    # Registration reply
-    if stat == 'r0':
-        line_bot_api.reply_message(
-            event.reply_token,
-            TextSendMessage(text="初次見面，請輸入您的姓名")
-        )
-    elif stat == 'r1':
-        line_bot_api.reply_message(
-            event.reply_token,
-            TextSendMessage(text="請輸入您的生日（年年年年月月日日）")
-        )
-    elif stat == 'r2':
-        line_bot_api.reply_message(
-            event.reply_token,
-            TextSendMessage(text="請輸入您的身份證末四碼")
-        )
-    elif stat == 'r3':
-        line_bot_api.reply_message(
-            event.reply_token,
-            TextSendMessage(text="註冊成功啦")
-        )
-        session.status[userid]['sess_status'] = session.init_state
-    elif stat == 'error':
-        line_bot_api.reply_message(
-            event.reply_token,
-            TextSendMessage(text="不好意思，您的輸入有所異常。請重新輸入…")
-        )
+    # User in registration
+    if stat in ["r0", "r1", "r2", "r_err"]:
+        stat = utilities.register(userid, usermsg, session)
+        responder.registration(event, stat)
+        pass
     else:
     # Reply user
         line_bot_api.reply_message(
@@ -115,6 +92,7 @@ def handle_message(event):
     pass
 
 if __name__ == "__main__":
+    signal.signal(signal.SIGINT, sess.signal_handler)
     port = int(os.environ.get('PORT', 8080))
     app.run(host='0.0.0.0', port=port)
 
