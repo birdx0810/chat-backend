@@ -1,10 +1,14 @@
 # -*- coding: UTF-8 -*-
-# Log final message
-def final_msg():
-    session.status[userid]['sess_status'] = session.init_state
+'''
+The script for responding to user
+- Registration
+- TODO: Event High Temperature 
+- TODO: Event Push News
+'''
+# Import required modules
 
-# Registration reply module
-def registration(event, stat)
+
+def registration_resp(event, stat):
     '''
     Gets the status of user and replies according to user's registration status
     '''
@@ -33,3 +37,5 @@ def registration(event, stat)
             event.reply_token,
             TextSendMessage(text=msg)
         )
+
+def high_temp_resp(event, stat):

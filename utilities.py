@@ -1,45 +1,109 @@
 # -*- coding: UTF-8 -*-
 # Import required modules
-import database
+import pickle
+import time
+import signal
 
-def register(userid, message, sess):
+class Log():
+    def __init__(self):
+        # Log file path
+        self.path = './logs/app.log'
+
+    def signal_handler(self, signal):
+        '''
+        Gracefully shutdown and close handlers
+        '''
+        logging.shutdown()
+
+    # TODO: Setup program logger
     '''
-    This is the main function for the registration flow
-    Updates the session dictionary and returns status of user
+    logging.basicConfig(
+        level=logging.DEBUG
+        format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s'
+        datefmt='%Y-%m-%d %H-%M-%s'
+        filename='./logs/app.log'
+        filemode='a'
+    )
+    logger = logging.getLogger()
+
+    # Log process id
+    _pid = os.getpid()
+    with open('./logs/service.pid', 'w') as f:
+        f.write(str(_pid))
+        f.close()
+
+    # Log sysout 
+    syslog = os.fdopen('./log/app.log', 'a', 0)
+    sys.stdout = syslog
+    sys.stderr = syslog
     '''
-    # Initialize Database
-    path = 'medbot.db'
-    conn = connect_db(path)
 
-    # Check user in DB
-    qry = """SELECT * FROM mb_user WHERE line_id=?"""
-    result = var_query(conn, qry, (userid,))
+class Session():
+    def __init__(self):
+        # Session file path
+        self.path = './session/session.pickle'
+        # User session status
+        self.status = {}
+        # Initial state
+        self.init_state = None
 
-    # New userid detected
-    if not result and userid not in sess.status:
-        sess.add_status(userid)
-        return 'r0'
-    # Get user Chinese name
-    elif not result and sess.status[userid]['sess_status'] == 'r0':
-        if re.match(r'[\u4e00-\u9fff]{2,4}', message):
-            sess.status[userid]["user_name"] = message
-            sess.status[userid]['sess_status'] = 'r1'
-            return 'r1'
-        else:
-            return "r_err"
-    # Get user birthdate
-    elif not result and sess.status[userid]['sess_status'] == 'r1':
-        year = int(message[0:4])
-        month = int(message[4:6])
-        day = int(message[6:8])
-        birth = str(year) + '-' + str(month) + '-' + str(day) 
-        if len(message)==8 and year <= current_year and 1<=month<=12 and 1<=day<=31:
-            sess.status[userid]["user_bday"] = birth
-            sess.status[userid]['sess_status'] = 'r2'
-            # Add user to DB
-            qry = """INSERT INTO mb_user (line_id, name, birth, nric) VALUES (?, ?, ?, ?)"""
-            update(conn, qry, (userid, name, birth, nric))
-            return 'r2'
-        else:
-            return "r_err"
-    #TODO: Add conditions in case of errors
+    def signal_handler(self, signal):
+        '''
+        Saves the session state when process is killed
+        '''
+        self.save_session()
+        sys.exit(0)
+
+    def save_session(self):
+        '''
+        Save session to a pickle file
+        '''
+        pickle.dump(self.status, self.path)
+
+    def add_status(self, userid):
+        '''
+        Add new user to dict.
+        '''
+        self.status[userid] = {}
+        self.status[userid]["user_name"] = None
+        self.status[userid]["user_bday"] = None
+        self.status[userid]["last_msg"] = None
+        self.status[userid]["sess_status"] = 'r0'
+        self.status[userid]["sess_time"] = time.time()
+        print(f'New user: {userid}')
+
+    def get_status(self, userid):
+        '''
+        Checks the status of the user
+        If user not found, add user to dict and return `status = 'r0'` to trigger registration
+        Returns a status. Do not use to trigger any other function!!!
+        '''
+        try:
+            stat = status[userid]["sess_status"]
+            return stat
+        except:
+            self.add_status(userid)
+            stat = status[userid]["sess_status"]
+            return stat
+
+    def switch_status(self, userid, status):
+        '''
+        Switch user status and log time
+        '''
+        self.status[userid]["sess_status"] = self.status
+        self.status[userid]["sess_time"] = time.time()
+
+    def update_msg(self, userid, msg):
+        '''
+        Update the last message sent to user
+        '''
+        self.status[userid]["last_msg"] = msg
+
+    def get_msg(self, userid):
+        '''
+        Gets the last message sent to user
+        '''
+        return self.status[userid]["last_msg"]
+
+    
+            

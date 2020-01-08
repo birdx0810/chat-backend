@@ -10,7 +10,7 @@ from flask.cli import with_appcontext
 import datetime, re
 
 # Connect to DB
-def connect_db(path):
+def connect(path):
     '''
     Initiallize the connection to DB
     Prints an error if fail to connect
@@ -24,7 +24,7 @@ def connect_db(path):
 # Function factory
 def query(conn, qry, var):
     '''
-    Function for executing `SELECT * FROM table WHERE var=foo`
+    Function for executing `SELECT * FROM table WHERE var0=foo, var1=bar`
     '''
     c = conn.cursor()
     c.execute(qry, var)
@@ -53,5 +53,11 @@ def log(userid, message, sess):
     '''
     qry = "INSERT INTO mb_logs (user_id, message, reply, timestamp) VALUES (?, ?, ?)"
     time = datetime.datetime.now()
-    time = time.strftime("%Y.%m.%d %H:%M:%S")
+    time = time.strftime("%Y-%m-%d %H:%M:%S")
     update(conn, qry, (userid, message, time))
+
+def sync(sess):
+    '''
+    TODO: Sync session dictionary to DB
+    '''
+    pass
