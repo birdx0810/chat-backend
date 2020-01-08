@@ -60,6 +60,12 @@ class Session():
         '''
         pickle.dump(self.status, self.path)
 
+    def load_session(self):
+        '''
+        Load session from pickle file
+        '''
+        self.status = pickle.load(self.path)
+
     def add_status(self, userid):
         '''
         Add new user to dict.
@@ -105,5 +111,6 @@ class Session():
         '''
         return self.status[userid]["last_msg"]
 
-    
-            
+# Unit test for log or session
+if __name__ == "__main__":
+    pass

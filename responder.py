@@ -32,6 +32,7 @@ def registration_resp(event, stat):
         )
         session.status[userid]['sess_status'] = session.init_state
     elif stat == 'error':
+        # TODO: Get last message for hint
         msg = "不好意思，您的輸入有所異常。請重新輸入…"
         line_bot_api.reply_message(
             event.reply_token,
@@ -39,3 +40,9 @@ def registration_resp(event, stat):
         )
 
 def high_temp_resp(event, stat):
+    #TODO
+    pass
+
+def push_news_resp(event, stat):
+    #TODO
+    pass

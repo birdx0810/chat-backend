@@ -1,10 +1,16 @@
 # -*- coding: UTF-8 -*-
 # Import 3rd-party modules
-import click
-import mysql.connector as mariadb
-from mysql.connector import Error
 from flask import current_app, g
 from flask.cli import with_appcontext
+
+import mysql.connector as mariadb
+from mysql.connector.errors import (
+    DataError,
+    OperationalError,
+    ProgrammingError
+)
+
+import click
 
 # Import system modules
 import datetime, re
@@ -58,6 +64,22 @@ def log(userid, message, sess):
 
 def sync(sess):
     '''
-    TODO: Sync session dictionary to DB
+    TODO: Sync session dictionary and DB
     '''
+    pass
+
+def check_user(name, birth, nric=None):
+    '''
+    Get user line_id with `user_name` and `user_bday`
+    Returns matched line_id
+    '''
+    conn = connect_db(path)
+
+    qry = """SELECT line_id FROM mb_user WHERE name=? and birth=?"""
+    result = var_query(conn, qry, (name, birth))
+
+    return result
+
+# Unit test for database
+if __name__ == "__main__":
     pass

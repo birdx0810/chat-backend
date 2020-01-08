@@ -61,10 +61,26 @@ def callback():
         abort(400)
     return 'OK'
 
-@app.route("/api/event_high_temp", methods=['POST'])
+# API for triggering event.high_temp case
+# Accepts a json file with line_id and 
+@app.route('/event_high_temp', methods=['POST'])
 def high_temp():
-    #TODO: Trigger high_temp
-    pass
+    if request.headers['Content-Type'] != 'application/json':
+        return abort(400, 'Bad Request: Please use `json` format')
+    elif request.method != 'POST':
+        return abort(403, 'Forbidden: Please use `POST` request')
+    else:
+        data = request.json
+        userid = db.check_user(data['name'], data['birth'])
+        if userid is None:
+            return abort(400, 'Bad Request: User not found')
+
+        # Get message from condition.condition_diagnosis
+        dialogue_code, message = res.condition_diagnosis.greeting()
+        sess.session_update_dialogue(userid,dialogue_code)
+        line_bot_api.push_message(userid, message)
+
+        return "OK"
 
 @app.route("/api/event_push_news")
 def push_news():
@@ -96,15 +112,16 @@ def handle_message(event):
     if stat in ["r0", "r1", "r2", "r_err"]:
         stat = e.register(userid, usermsg, session)
         responder.registration(event, stat)
-    # User in scenario 1
+    # TODO: User in scenario 1
     elif stat in ["s1s1", "s1s2", "s1s3", "s1s4"]:
-        stat = e.high_temp(userid, stat, session)
-        responder.high_temp()
+        stat = e.high_temp(userid, usermsg, session)
+        responder.high_temp(event, stat)
+    # TODO: User in scenario 2
     elif stat in ["s2s1", "s2s2", "s2s3"]:
-        stat = e.push_news(userid, stat, session)
-        responder.push_news()
+        stat = e.push_news(userid, usermsg, session)
+        responder.push_news(event, stat)
+    # TODO: User in chat state (echo)
     else:
-    # Reply user (echo)
         line_bot_api.reply_message(
             event.reply_token,
             TextSendMessage(text=event.message.text)
