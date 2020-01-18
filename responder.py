@@ -39,10 +39,24 @@ def registration_resp(event, stat):
             TextSendMessage(text=msg)
         )
 
+def qa_resp(event, stat, msg):
+    # TODO
+    if stat == 'qa0':
+        msg = "您好，請問我可以如何幫你？"
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text=msg)
+        )
+    elif stat == 'qa1':
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text=msg)
+        )
+
 def high_temp_resp(event, stat):
-    #TODO
+    # TODO
     pass
 
 def push_news_resp(event, stat):
-    #TODO
+    # TODO
     pass

@@ -93,6 +93,10 @@ def push_news():
 # Text message handler
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
+    '''
+    Pass id, msg, and session into event function and return updated status
+    Respond to user according to new status
+    '''
     # Print event metadata
     # print(event)
 
@@ -111,15 +115,27 @@ def handle_message(event):
     # User in registration
     if stat in ["r0", "r1", "r2", "r_err"]:
         stat = e.register(userid, usermsg, session)
-        responder.registration(event, stat)
+        responder.registration_resp(event, stat)
+    
     # TODO: User in scenario 1
     elif stat in ["s1s1", "s1s2", "s1s3", "s1s4"]:
         stat = e.high_temp(userid, usermsg, session)
         responder.high_temp(event, stat)
+    
     # TODO: User in scenario 2
     elif stat in ["s2s1", "s2s2", "s2s3"]:
         stat = e.push_news(userid, usermsg, session)
         responder.push_news(event, stat)
+    
+    # TODO: User trigger QA
+    elif msg == '\qa':
+        stat = 'qa0'
+        session.switch_status(userid, stat)
+        responder.qa_resp(event, stat)
+    elif stat in ["qa0", "qa1", "qa2"]:
+        stat = e.qa(userid, usermsg, session)
+        responder.qa_resp(event, stat)
+    
     # TODO: User in chat state (echo)
     else:
         line_bot_api.reply_message(
