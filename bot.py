@@ -15,12 +15,12 @@ from linebot.models import (
 )
 
 # Import system modules
-import logging, sys, os
+import logging, signal, sys, os
 
 # Import local modules
 import database as db
-import event as e 
-import session, utilities, responder
+import event as e
+import utilities, responder
 
 ##############################
 # Application & variable initialization
@@ -34,13 +34,13 @@ if is_development:
     # Channel Access Token
     line_bot_api = LineBotApi('XEQclTuSIm6/pcNNB4W9a2DDX/KAbCBmZS4ltBl+g8q2IxwJyqdtgNNY9KtJJxfkuXbHmSdQPAqRWjAciP2IZgrvLoF3ZH2C2Hg+zZMgoy/xM/RbnoFa2eO9GV2F4E1qmjYxA0FbJm1uZkUms9o+4QdB04t89/1O/w1cDnyilFU=')
     # Channel Secret
-    handler = WebhookHandler('fabfd7538c098fe222e8012e1df65740') 
+    handler = WebhookHandler('fabfd7538c098fe222e8012e1df65740')
 else:
     # Fill in when required
     pass
 
 # Initialize Session
-session = session.Session()
+session = utilities.Session()
 
 ##############################
 # API handler
@@ -62,7 +62,7 @@ def callback():
     return 'OK'
 
 # API for triggering event.high_temp case
-# Accepts a json file with line_id and 
+# Accepts a json file with line_id and
 @app.route('/event_high_temp', methods=['POST'])
 def high_temp():
     if request.headers['Content-Type'] != 'application/json':
@@ -116,17 +116,17 @@ def handle_message(event):
     if stat in ["r0", "r1", "r2", "r_err"]:
         stat = e.register(userid, usermsg, session)
         responder.registration_resp(event, stat)
-    
+
     # TODO: User in scenario 1
     elif stat in ["s1s1", "s1s2", "s1s3", "s1s4"]:
         stat = e.high_temp(userid, usermsg, session)
         responder.high_temp(event, stat)
-    
+
     # TODO: User in scenario 2
     elif stat in ["s2s1", "s2s2", "s2s3"]:
         stat = e.push_news(userid, usermsg, session)
         responder.push_news(event, stat)
-    
+
     # TODO: User trigger QA
     elif msg == '\qa':
         stat = 'qa0'
@@ -135,7 +135,7 @@ def handle_message(event):
     elif stat in ["qa0", "qa1", "qa2"]:
         stat = e.qa(userid, usermsg, session)
         responder.qa_resp(event, stat)
-    
+
     # TODO: User in chat state (echo)
     else:
         line_bot_api.reply_message(
@@ -155,7 +155,7 @@ def handle_message(event):
     package_id = event.message.package_id
 
     line_bot_api.reply_message(
-        event.reply_token, 
+        event.reply_token,
         StickerMessage(id=id,sticker_id=sticker_id,package_id=package_id)
     )
     pass
@@ -166,7 +166,7 @@ def handle_message(event):
 
 if __name__ == "__main__":
     # Hook interrupt signal
-    signal.signal(signal.SIGINT, sess.signal_handler)
+    signal.signal(signal.SIGINT, session.signal_handler)
 
     # Setup host port
     port = int(os.environ.get('PORT', 8080))

@@ -2,10 +2,12 @@
 '''
 Some utilities for QA event
 '''
+# Import required modules
+import pickle
 
 # Initialize BERT-as-service encoder
 from bert_serving.client import BertClient
-bc = BertClient(ip='192.168.0.220')
+bc = BertClient(ip='140.116.245.101')
 
 # QA and keyword triplet
 qa_dict = {
