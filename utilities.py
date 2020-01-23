@@ -3,6 +3,7 @@
 import pickle
 import time
 import signal
+import sys
 
 class Log():
     def __init__(self):
@@ -32,7 +33,7 @@ class Log():
         f.write(str(_pid))
         f.close()
 
-    # Log sysout 
+    # Log sysout
     syslog = os.fdopen('./log/app.log', 'a', 0)
     sys.stdout = syslog
     sys.stderr = syslog
@@ -58,7 +59,8 @@ class Session():
         '''
         Save session to a pickle file
         '''
-        pickle.dump(self.status, self.path)
+        with open(self.path, 'wb') as f:
+            pickle.dump(self.status, f)
 
     def load_session(self):
         '''
