@@ -16,7 +16,7 @@ import click
 import datetime, re
 
 config = {
-    'host': '192.168.0.220',
+    'host': '127.0.0.1',
     'user': 'mb-admin',
     'password': '04bu2xeK',
     'database': 'medbot_db',
@@ -30,7 +30,7 @@ def connect():
     '''
     try:
         conn = mariadb.connect(**config)
-    except Error as e:
+    except Exception as e:
         print(e)
     return conn
 
@@ -81,7 +81,7 @@ def log(userid, message, sess):
     '''
     Log user messages and the replies of bot to DB
     '''
-    
+
     qry = "INSERT INTO mb_logs (user_id, message, reply, timestamp) VALUES (?, ?, ?)"
     time = datetime.datetime.now()
     time = time.strftime("%Y-%m-%d %H:%M:%S")
@@ -105,4 +105,5 @@ def check_user(name, birth, nric=None):
 # Unit test for database
 if __name__ == "__main__":
     conn = connect()
+    # conn = mariadb.connect(**config)
     pass
