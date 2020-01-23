@@ -47,7 +47,7 @@ class Session():
         # Initial state
         self.init_state = None
 
-    def signal_handler(self, signal):
+    def signal_handler(self, signal, frame):
         '''
         Saves the session state when process is killed
         '''
