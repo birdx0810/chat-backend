@@ -67,7 +67,7 @@ class Session():
         '''
         Load session from pickle file
         '''
-        if os.path.exists(path)
+        if os.path.exists(path):
             with open(self.path, 'rb') as f:
                 self.status = pickle.load(self.path)
         else:
