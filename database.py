@@ -44,7 +44,7 @@ def query(conn, qry, var):
         c = conn.cursor()
         c.execute(qry, var)
         rows = c.fetchall()
-    except Error as e:
+    except Exception as e:
         print(e)
     finally:
         c.close()
