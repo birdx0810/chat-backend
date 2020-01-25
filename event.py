@@ -22,8 +22,8 @@ def registration(userid, message, sess):
     conn = db.connect()
 
     # TODO: Check user in DB_resp
-    # qry = """SELECT * FROM mb_user WHERE line_id=?"""
-    # result = var_query(conn, qry, (userid,))
+    qry = """SELECT * FROM mb_user WHERE line_id=?"""
+    result = var_query(conn, qry, (userid,))
 
     # New userid detected
     if not result and userid not in sess.status:
