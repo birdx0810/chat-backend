@@ -110,10 +110,10 @@ def handle_message(event):
 
     # Check user status
     stat = session.get_status(userid)
-    print(f'Status:{stat}')
+    print(f'Status: {stat}')
 
     # User in registration
-    if stat in ["r0", "r1", "r2", "r_err"]:
+    if stat in ["r", "r0", "r1", "r2", "r_err"]:
         stat = e.registration(userid, usermsg, session)
         print(f'Status: {stat}')
         responder.registration_resp(event, stat)

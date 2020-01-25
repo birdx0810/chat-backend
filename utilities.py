@@ -81,7 +81,7 @@ class Session():
         self.status[userid]["user_name"] = None
         self.status[userid]["user_bday"] = None
         self.status[userid]["last_msg"] = None
-        self.status[userid]["sess_status"] = 'r0'
+        self.status[userid]["sess_status"] = 'r'
         self.status[userid]["sess_time"] = time.time()
         print(f'New user: {userid}')
 
