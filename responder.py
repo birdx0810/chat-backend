@@ -6,6 +6,32 @@ The script for responding to user
 - TODO: Event Push News
 '''
 # Import required modules
+from linebot import (
+        LineBotApi, WebhookHandler
+
+)
+from linebot.exceptions import (
+        InvalidSignatureError
+
+)
+from linebot.models import (
+        MessageEvent, TextMessage, TextSendMessage, StickerMessage
+
+)
+
+##############################
+# Application & variable initialization
+##############################
+# Is development or production
+is_development=True
+if is_development:
+    # Channel Access Token
+    line_bot_api = LineBotApi('XEQclTuSIm6/pcNNB4W9a2DDX/KAbCBmZS4ltBl+g8q2IxwJyqdtgNNY9KtJJxfkuXbHmSdQPAqRWjAciP2IZgrvLoF3ZH2C2Hg+zZMgoy/xM/RbnoFa2eO9GV2F4E1qmjYxA0FbJm1uZkUms9o+4QdB04t89/1O/w1cDnyilFU=')
+    # Channel Secret
+    handler = WebhookHandler('fabfd7538c098fe222e8012e1df65740')
+else:
+    # Fill in when required
+    pass
 
 
 def registration_resp(event, stat):

@@ -28,7 +28,7 @@ def registration(userid, message, sess):
     result = db.query(conn, qry, (userid,))
 
     # New userid detected
-    if sess.status[userid]['sess_status'] == 'r' not result and userid not in sess.status:
+    if sess.status[userid]['sess_status'] == 'r' or not result and userid not in sess.status:
         sess.add_status(userid)
         return 'r0'
     # Get user Chinese name
