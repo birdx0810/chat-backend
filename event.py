@@ -7,6 +7,8 @@ The script for event handling (a.k.a the dirty part)
 - Scene 2: Push Disease News
 '''
 # Import required modules
+import re
+
 import database as db
 import qa_utils
 
