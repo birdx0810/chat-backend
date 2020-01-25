@@ -7,6 +7,7 @@ The script for event handling (a.k.a the dirty part)
 - Scene 2: Push Disease News
 '''
 # Import required modules
+from datetime import datetime
 import re
 
 import database as db
@@ -44,14 +45,15 @@ def registration(userid, message, sess):
     elif not result and sess.status[userid]['sess_status'] == 'r1':
         # Try parsing string to integer
         try: 
-            year = int(message[0:4])
-            month = int(message[4:6])
-            day = int(message[6:8])
+            year = message[0:4]
+            month = message[4:6]
+            day = message[6:8]
+            current = datetime.now()
+            date = datetime(year=int(year),month=int(month),day=int(day))
         except:
             return "r_err"
-        birth = str(year) + '-' + str(month) + '-' + str(day)
         # Check if string is legal birth date
-        if len(message) == 8 and year <= current_year and 1 <= month <= 12 and 1 <= day <= 31:
+        if len(message) == 8 and date < current:
             sess.status[userid]["user_bday"] = birth
             sess.status[userid]['sess_status'] = 'r2'
             # TODO: Add user to DB
