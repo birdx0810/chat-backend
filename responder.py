@@ -42,7 +42,7 @@ def registration_resp(event, stat, session):
     '''
     err_msg = {
         'r0': "請輸入您的姓名（e.g. 大鳥陳）",
-        'r1':,"請輸入您的生日（年年年年月月日日）"
+        'r1': "請輸入您的生日（年年年年月月日日）"
     }
 
     if stat == 'r0':
