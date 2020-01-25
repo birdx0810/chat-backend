@@ -18,9 +18,8 @@ def registration(userid, message, sess):
     This is the main function for the registration flow
     Updates the session dictionary and returns status of user
     '''
-    # Initialize Database
-    path = 'medbot.db'
-    conn = db.connect(path)
+    # Initialize Database Connection
+    conn = db.connect()
 
     # TODO: Check user in DB_resp
     # qry = """SELECT * FROM mb_user WHERE line_id=?"""
