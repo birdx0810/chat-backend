@@ -50,8 +50,8 @@ def registration(userid, message, sess):
             sess.status[userid]["user_bday"] = birth
             sess.status[userid]['sess_status'] = 'r2'
             # TODO: Add user to DB
-            # qry = """INSERT INTO mb_user (line_id, name, birth, nric) VALUES (?, ?, ?, ?)"""
-            # update(conn, qry, (userid, name, birth, nric))
+            qry = """INSERT INTO mb_user (line_id, name, birth) VALUES %s, %s, %s"""
+            update(conn, qry, (userid, name, birth))
             return 'r2'
         else:
             return "r_err"
