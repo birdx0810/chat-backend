@@ -34,7 +34,7 @@ def registration(userid, message, sess):
     # Get user Chinese name
     elif not result and sess.status[userid]['sess_status'] == 'r0':
         print('Scenario 0: r1')
-        if re.match(r'[\u4e00-\u9fff]{2,4}', message):
+        if 2 <= len(message) <= 4 and re.match(r'[\u4e00-\u9fff]{2,4}', message):
             sess.status[userid]["user_name"] = message
             sess.status[userid]['sess_status'] = 'r1'
             return 'r1'
