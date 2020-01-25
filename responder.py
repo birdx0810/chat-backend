@@ -2,7 +2,7 @@
 '''
 The script for responding to user
 - Registration
-- TODO: Event High Temperature 
+- TODO: Event High Temperature
 - TODO: Event Push News
 '''
 # Import required modules
@@ -31,7 +31,7 @@ def registration_resp(event, stat):
             TextSendMessage(text=msg)
         )
         session.status[userid]['sess_status'] = session.init_state
-    elif stat == 'error':
+    elif stat == 'r_err':
         # TODO: Get last message for hint
         msg = "不好意思，您的輸入有所異常。請重新輸入…"
         line_bot_api.reply_message(

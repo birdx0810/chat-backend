@@ -29,10 +29,12 @@ def registration(userid, message, sess):
 
     # New userid detected
     if not result and userid not in sess.status:
+        print('Scenario 0: r0')
         sess.add_status(userid)
         return 'r0'
     # Get user Chinese name
     elif not result and sess.status[userid]['sess_status'] == 'r0':
+        print('Scenario 0: r1')
         if re.match(r'[\u4e00-\u9fff]{2,4}', message):
             sess.status[userid]["user_name"] = message
             sess.status[userid]['sess_status'] = 'r1'
@@ -44,7 +46,7 @@ def registration(userid, message, sess):
         year = int(message[0:4])
         month = int(message[4:6])
         day = int(message[6:8])
-        birth = str(year) + '-' + str(month) + '-' + str(day) 
+        birth = str(year) + '-' + str(month) + '-' + str(day)
         if len(message)==8 and year <= current_year and 1<=month<=12 and 1<=day<=31:
             sess.status[userid]["user_bday"] = birth
             sess.status[userid]['sess_status'] = 'r2'
@@ -59,7 +61,7 @@ def registration(userid, message, sess):
 ##############################
 # QA Flow
 # qa0: User asks(sends) a question
-# qa1: User replies if answer matched question 
+# qa1: User replies if answer matched question
 ##############################
 def qa(userid, stat, sess):
     # TODO
@@ -81,7 +83,7 @@ def qa(userid, stat, sess):
                 sim = cosine_similarity(query, qa_utils.question_embeddings[idx].resize((768,1)))
                 similarity.append(sim)
             max_idx, _ = max((i,v)for i,v in enumerate(similarity))
-            msg = f"你想問的問題可能是:{repr(values[0])}\n我們的回答是:{repr(values[1])}\n請問是否是你想要問的問題嗎？"        
+            msg = f"你想問的問題可能是:{repr(values[0])}\n我們的回答是:{repr(values[1])}\n請問是否是你想要問的問題嗎？"
             return "qa_2"
     pass
 
