@@ -48,6 +48,8 @@ class Session():
         self.status = {}
         # Initial state
         self.init_state = None
+        # Highlighter for debug
+        self.highlight = '******************************\n'
 
     def signal_handler(self, signal, frame):
         '''
@@ -63,16 +65,18 @@ class Session():
         '''
         with open(self.path, 'wb') as f:
             pickle.dump(self.status, f)
-        print(f'Saved session to {self.path}')
+        print(self.highlight + f'Saved session to \"{self.path}\"\n' + self.highlight)
 
     def load_session(self):
         '''
         Load session from pickle file
         '''
-        if os.path.exists(path):
+        if os.path.exists(self.path):
             with open(self.path, 'rb') as f:
-                self.status = pickle.load(self.path)
+                self.status = pickle.load(f)
+            print(self.highlight + f'Retrieved session file with {len(self.status)} users\n' + self.highlight)
         else:
+            print("No session file found. Starting anew.")
             self.status = {}
 
     def add_status(self, userid):
