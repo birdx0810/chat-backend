@@ -27,13 +27,9 @@ def registration(userid, message, sess):
     result = db.query(conn, qry, (userid,))
     print(result)
 
-    # New userid detected
+    # New userid detected (not in session)
     if sess.status[userid]['sess_status'] == 'r':
         sess.status[userid]['sess_status'] = 'r0'
-        return 'r0'
-    # TODO: Some weird thing happened
-    elif not result and userid not in sess.status:
-        sess.add_status(userid)
         return 'r0'
     # Get user Chinese name
     elif not result and sess.status[userid]['sess_status'] == 'r0':
@@ -60,6 +56,9 @@ def registration(userid, message, sess):
         else:
             return "r_err"
     #TODO: Add conditions in case of errors
+    elif not result and userid not in sess.status:
+        sess.add_status(userid)
+        return 'r0'
 
 ##############################
 # QA Flow

@@ -115,27 +115,27 @@ def handle_message(event):
     # User in registration
     if stat in ["r", "r0", "r1", "r2", "r_err"]:
         stat = e.registration(userid, usermsg, session)
-        print(f'Status: {stat}')
-        responder.registration_resp(event, stat)
+        print(f'User: {userid}\nStatus Update: {stat}')
+        responder.registration_resp(event, stat, session)
 
     # TODO: User in scenario 1
     elif stat in ["s1s1", "s1s2", "s1s3", "s1s4"]:
         stat = e.high_temp(userid, usermsg, session)
-        responder.high_temp(event, stat)
+        responder.high_temp(event, stat, session)
 
     # TODO: User in scenario 2
     elif stat in ["s2s1", "s2s2", "s2s3"]:
         stat = e.push_news(userid, usermsg, session)
-        responder.push_news(event, stat)
+        responder.push_news(event, stat, session)
 
     # TODO: User trigger QA
     elif msg == '\qa':
         stat = 'qa0'
         session.switch_status(userid, stat)
-        responder.qa_resp(event, stat)
+        responder.qa_resp(event, stat, session)
     elif stat in ["qa0", "qa1", "qa2"]:
         stat = e.qa(userid, usermsg, session)
-        responder.qa_resp(event, stat)
+        responder.qa_resp(event, stat, session)
 
     # TODO: User in chat state (echo)
     else:
