@@ -53,7 +53,7 @@ def registration(userid, message, sess):
         except:
             return "r_err"
         # Check if string is legal birth date
-        if len(message) == 8 and date < current:
+        if len(message) == 8 and birthdate < current:
             sess.status[userid]["user_bday"] = birthdate
             sess.status[userid]['sess_status'] = 'r2'
             # TODO: Add user to DB
