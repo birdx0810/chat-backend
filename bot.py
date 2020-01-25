@@ -114,7 +114,7 @@ def handle_message(event):
 
     # User in registration
     if stat in ["r0", "r1", "r2", "r_err"]:
-        stat = e.register(userid, usermsg, session)
+        stat = e.registration(userid, usermsg, session)
         responder.registration_resp(event, stat)
 
     # TODO: User in scenario 1
