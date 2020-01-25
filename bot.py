@@ -166,6 +166,9 @@ def handle_message(event):
 ##############################
 
 if __name__ == "__main__":
+    # Load session
+    session.load_session()
+
     # Hook interrupt signal
     signal.signal(signal.SIGINT, session.signal_handler)
 
