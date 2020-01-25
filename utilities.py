@@ -53,6 +53,7 @@ class Session():
         '''
         Saves the session state when process is killed
         '''
+        print('Pressed Ctrl+C')
         self.save_session()
         sys.exit(0)
 
@@ -62,6 +63,7 @@ class Session():
         '''
         with open(self.path, 'wb') as f:
             pickle.dump(self.status, f)
+        print(f'Saved session to {self.path}')
 
     def load_session(self):
         '''
