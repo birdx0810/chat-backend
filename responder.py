@@ -65,6 +65,7 @@ def registration_resp(event, stat, session):
         )
         session.status[userid]['sess_status'] = session.init_state
     elif stat == 'r_err':
+        userid = event.source.user_id
         stat = session.status[userid]['sess_status']
         msg = "不好意思，您的輸入有所異常。\n" + err_msg[stat]
         line_bot_api.reply_message(
