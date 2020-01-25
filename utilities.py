@@ -3,6 +3,7 @@
 import pickle
 import time
 import signal
+import os
 
 class Log():
     def __init__(self):
@@ -64,7 +65,11 @@ class Session():
         '''
         Load session from pickle file
         '''
-        self.status = pickle.load(self.path)
+        if os.path.exists(path)
+            with open(self.path, 'rb') as f:
+                self.status = pickle.load(self.path)
+        else:
+            self.status = {}
 
     def add_status(self, userid):
         '''
@@ -85,11 +90,11 @@ class Session():
         Returns a status. Do not use to trigger any other function!!!
         '''
         try:
-            stat = status[userid]["sess_status"]
+            stat = self.status[userid]["sess_status"]
             return stat
         except:
             self.add_status(userid)
-            stat = status[userid]["sess_status"]
+            stat = self.status[userid]["sess_status"]
             return stat
 
     def switch_status(self, userid, status):
