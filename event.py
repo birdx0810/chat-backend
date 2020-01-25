@@ -49,12 +49,12 @@ def registration(userid, message, sess):
             month = message[4:6]
             day = message[6:8]
             current = datetime.now()
-            date = datetime(year=int(year),month=int(month),day=int(day))
+            birthdate = datetime(year=int(year),month=int(month),day=int(day))
         except:
             return "r_err"
         # Check if string is legal birth date
         if len(message) == 8 and date < current:
-            sess.status[userid]["user_bday"] = birth
+            sess.status[userid]["user_bday"] = birthdate
             sess.status[userid]['sess_status'] = 'r2'
             # TODO: Add user to DB
             qry = """INSERT INTO mb_user (line_id, name, birth) VALUES %s, %s, %s"""
