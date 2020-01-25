@@ -20,7 +20,7 @@ def registration(userid, message, sess):
     '''
     # Initialize Database
     path = 'medbot.db'
-    conn = connect_db(path)
+    conn = db.connect(path)
 
     # TODO: Check user in DB_resp
     # qry = """SELECT * FROM mb_user WHERE line_id=?"""
