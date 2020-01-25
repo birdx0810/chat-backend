@@ -44,12 +44,13 @@ def query(conn, qry, var):
         c = conn.cursor()
         c.execute(qry, var)
         rows = c.fetchall()
+        return rows
     except Exception as e:
         print(e)
     finally:
         c.close()
         conn.close()
-    return rows
+        
 
 def update(conn, qry, var):
     '''
