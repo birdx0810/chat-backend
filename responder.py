@@ -40,8 +40,8 @@ def registration_resp(event, stat, session):
     '''
     Gets the status of user and replies according to user's registration status
     '''
-    msg_r = {
-        'r0': "請輸入您的姓名",
+    err_msg = {
+        'r0': "請輸入您的姓名（e.g. 大鳥陳）",
         'r1':,"請輸入您的生日（年年年年月月日日）"
     }
 
@@ -65,9 +65,8 @@ def registration_resp(event, stat, session):
         )
         session.status[userid]['sess_status'] = session.init_state
     elif stat == 'r_err':
-        # TODO: Get last message for hint
         stat = session.status[userid]['sess_status']
-        msg = "不好意思，您的輸入有所異常。\n" + msg_r[stat]
+        msg = "不好意思，您的輸入有所異常。\n" + err_msg[stat]
         line_bot_api.reply_message(
             event.reply_token,
             TextSendMessage(text=msg)

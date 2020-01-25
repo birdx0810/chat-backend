@@ -42,11 +42,12 @@ def registration(userid, message, sess):
             return "r_err"
     # Get user birthdate
     elif not result and sess.status[userid]['sess_status'] == 'r1':
-        year = int(message[0:4])
-        month = int(message[4:6])
-        day = int(message[6:8])
+        if len(message) == 8: 
+            year = int(message[0:4])
+            month = int(message[4:6])
+            day = int(message[6:8])
         birth = str(year) + '-' + str(month) + '-' + str(day)
-        if len(message)==8 and year <= current_year and 1<=month<=12 and 1<=day<=31:
+        if year <= current_year and 1 <= month <= 12 and 1 <= day <= 31:
             sess.status[userid]["user_bday"] = birth
             sess.status[userid]['sess_status'] = 'r2'
             # TODO: Add user to DB
