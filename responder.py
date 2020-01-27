@@ -88,7 +88,28 @@ def qa_resp(event, stat, msg):
         )
 
 def high_temp_resp(event, stat):
-    # TODO
+    # Detected user high temperature
+    if stat == 's1s0':
+        question = "您好，手環資料顯示您的體溫似乎比較高，請問您有不舒服的情形嗎？"
+        buttons_template = TemplateSendMessage(
+            alt_text=question,
+            template=ButtonsTemplate(
+                title=question,
+                text=" ",
+                actions=[
+                    MessageTemplateAction(
+                        label='有',
+                        text='有'
+                    ),
+                    MessageTemplateAction(
+                        label='沒有',
+                        text='沒有'
+                    )
+                ]
+            )
+        )
+    elif stat == 's1s1':
+        if msg ==
     pass
 
 def push_news_resp(event, stat):

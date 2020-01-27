@@ -55,7 +55,6 @@ class Session():
         '''
         Saves the session state when process is killed
         '''
-        print('Pressed Ctrl+C')
         self.save_session()
         sys.exit(0)
 
@@ -76,7 +75,7 @@ class Session():
                 self.status = pickle.load(f)
             print(self.highlight + f'Retrieved session file with {len(self.status)} users\n' + self.highlight)
         else:
-            print("No session file found. Starting anew.")
+            print("No session file found. Using a new session.")
             self.status = {}
 
     def add_status(self, userid):
@@ -105,24 +104,13 @@ class Session():
             stat = self.status[userid]["sess_status"]
             return stat
 
-    def switch_status(self, userid, status):
+    def switch_status(self, userid, stat):
         '''
         Switch user status and log time
         '''
-        self.status[userid]["sess_status"] = self.status
+        self.status[userid]["sess_status"] = stat
         self.status[userid]["sess_time"] = time.time()
-
-    def update_msg(self, userid, msg):
-        '''
-        Update the last message sent to user
-        '''
-        self.status[userid]["last_msg"] = msg
-
-    def get_msg(self, userid):
-        '''
-        Gets the last message sent to user
-        '''
-        return self.status[userid]["last_msg"]
+        print(f'User {userid} status update `{status}`')
 
 # Unit test for log or session
 if __name__ == "__main__":

@@ -30,7 +30,7 @@ def connect():
     '''
     try:
         conn = mariadb.connect(**config)
-    except Exception as e:
+    except mariadb.Error as e:
         print(e)
     return conn
 
@@ -60,7 +60,7 @@ def update(conn, qry, var):
         conn = mariadb.connect(**config)
         c = conn.cursor()
         c.execute(qry, var)
-    except Error as e:
+    except mariadb.Error as e:
         conn.rollback()
         print(e)
     else:

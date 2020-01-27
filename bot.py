@@ -74,12 +74,17 @@ def high_temp():
         userid = db.check_user(data['name'], data['birth'])
         if userid is None:
             return abort(400, 'Bad Request: User not found')
+        
+        # (condition.condition_diagnosis)
+        # dialogue_code, message = res.condition_diagnosis.greeting()
+        # sess.session_update_dialogue(userid,dialogue_code)
+        # line_bot_api.push_message(userid, message)
 
-        # Get message from condition.condition_diagnosis
-        dialogue_code, message = res.condition_diagnosis.greeting()
-        sess.session_update_dialogue(userid,dialogue_code)
-        line_bot_api.push_message(userid, message)
-
+        # TODO: Trigger event.high_temp
+        print(f'User: {userid}')
+        stat = 's1s0'
+        session.switch_status(userid, stat)
+        responder.high_temp_resp(userid, stat)
         return "OK"
 
 @app.route("/api/event_push_news")
@@ -120,6 +125,7 @@ def handle_message(event):
 
     # TODO: User in scenario 1
     elif stat in ["s1s1", "s1s2", "s1s3", "s1s4"]:
+        # Respond first then push...
         stat = e.high_temp(userid, usermsg, session)
         responder.high_temp(event, stat, session)
 
