@@ -80,7 +80,6 @@ def high_temp():
         # sess.session_update_dialogue(userid,dialogue_code)
         # line_bot_api.push_message(userid, message)
 
-        # TODO: Trigger event.high_temp
         print(f'User: {userid}')
         stat = 's1s0'
         session.switch_status(userid, stat)
@@ -124,7 +123,7 @@ def handle_message(event):
         responder.registration_resp(event, stat, session)
 
     # TODO: User in scenario 1
-    elif stat in ["s1s1", "s1s2", "s1s3", "s1s4"]:
+    elif stat in ["s1s1", "s1d1", "s1d2", "s1d3", "s1d4", "s1d5", "s1d6", "s1s2", "s1s3", "s1s4"]:
         # Respond first then push...
         stat = e.high_temp(userid, usermsg, session)
         responder.high_temp(event, stat, session)
