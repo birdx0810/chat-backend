@@ -104,11 +104,11 @@ class Session():
             stat = self.status[userid]["sess_status"]
             return stat
 
-    def switch_status(self, userid, stat):
+    def switch_status(self, userid, status):
         '''
         Switch user status and log time
         '''
-        self.status[userid]["sess_status"] = stat
+        self.status[userid]["sess_status"] = status
         self.status[userid]["sess_time"] = datetime.now()
         print(f'User {userid} status update `{status}` @ {datetime.now()}')
 

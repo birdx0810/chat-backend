@@ -168,31 +168,31 @@ def high_temp_resp(event, status):
                 text=" ",
                 actions=[
                     MessageAction(
-                        label=symptom[0]
+                        label=symptom[0],
                         text=symptom[0]
                     ),
                     MessageAction(
-                        label=symptom[1]
-                        text=symptom[1]
+                        label=symptom[1],
+                        text=symptom[1],
                     ),
                     MessageAction(
-                        label=symptom[2]
+                        label=symptom[2],
                         text=symptom[2]
                     ),
                     MessageAction(
-                        label=symptom[3]
+                        label=symptom[3],
                         text=symptom[3]
                     ),
                     MessageAction(
-                        label=symptom[4]
+                        label=symptom[4],
                         text=symptom[4]
                     ),
                     MessageAction(
-                        label=symptom[5]
+                        label=symptom[5],
                         text=symptom[5]
                     ),
                     MessageAction(
-                        label=symptom[6]
+                        label=symptom[6],
                         text=symptom[6]
                     ),
                 ]

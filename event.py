@@ -15,6 +15,8 @@ import linebot.models.template
 
 from datetime import datetime
 import re
+import os
+import sys
 
 import database as db
 import qa_utils
@@ -47,11 +49,11 @@ def registration(userid, message, session):
     print(result)
 
     # New userid detected (not in sessionion)
-    if session.status[userid]['session_status'] == 'r':
+    if session.status[userid]['sess_status'] == 'r':
         session.switch_status(userid, 'r0')
         return 'r0'
     # Get user Chinese name
-    elif not result and session.status[userid]['session_status'] == 'r0':
+    elif not result and session.status[userid]['sess_status'] == 'r0':
         if 2 <= len(message) <= 4 and re.match(r'[\u4e00-\u9fff]{2,4}', message):
             session.status[userid]["user_name"] = message
             session.switch_status(userid, 'r1')
@@ -59,7 +61,7 @@ def registration(userid, message, session):
         else:
             return "r_err"
     # Get user birthdate
-    elif not result and session.status[userid]['session_status'] == 'r1':
+    elif not result and session.status[userid]['sess_status'] == 'r1':
         # Try parsing string to integer
         try: 
             year = message[0:4]
@@ -109,7 +111,7 @@ def high_temp(userid, session, message=None):
     '''
     High temperature event handler and push message
     '''
-    status = session.status[userid]['session_status']
+    status = session.status[userid]['sess_status']
 
     trad2sim = OpenCC("t2s")
     sim2trad = OpenCC("s2t")
@@ -200,7 +202,7 @@ def push_news():
     # TODO: Push news flow
 
     # 2. If there is news, push news and ask for location
-    if news:
+    # if news:
         
         
 
