@@ -52,7 +52,6 @@ def registration(userid, message, session):
         return 'r0'
     # Get user Chinese name
     elif not result and session.status[userid]['session_status'] == 'r0':
-        print('Scenario 0: r1')
         if 2 <= len(message) <= 4 and re.match(r'[\u4e00-\u9fff]{2,4}', message):
             session.status[userid]["user_name"] = message
             session.switch_status(userid, 'r1')
@@ -98,13 +97,15 @@ def qa(userid, status, session):
         session.switch_status(userid, 'qa1')
         return 'qa1'
     elif status == 'qa1':
+        # TODO: Find keyword and similarity here
         session.switch_status(userid, 'qa2')
         return 'qa2'
 
 ##############################
 # Scenario 1: Detected high temperature from user smart-band
 ##############################
-def high_temp(userid, message, session):
+# TODO: change inputs
+def high_temp(userid, session, message=None):
     '''
     High temperature event handler and push message
     '''
@@ -195,7 +196,14 @@ def high_temp(userid, message, session):
 # Scenario 2: Push news to user from CDC.gov.tw
 ##############################
 def push_news():
-    # TODO
+    # TODO: Prerequisites - Run crawler at specific time
+    # TODO: Push news flow
+
+    # 2. If there is news, push news and ask for location
+    if news:
+        
+        
+
     entities = ner_wrapper(msg)
     entities = "\n".join(set(entities))
     pass

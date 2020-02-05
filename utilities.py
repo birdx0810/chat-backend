@@ -1,7 +1,7 @@
 # -*- coding: UTF-8 -*-
 # Import required modules
+from datetime import datetime
 import pickle
-import time
 import os
 import signal
 import sys
@@ -87,7 +87,7 @@ class Session():
         self.status[userid]["user_bday"] = None
         self.status[userid]["last_msg"] = None
         self.status[userid]["sess_status"] = 'r'
-        self.status[userid]["sess_time"] = time.time()
+        self.status[userid]["sess_time"] = datetime.now()
         print(f'New user: {userid}')
 
     def get_status(self, userid):
@@ -109,8 +109,17 @@ class Session():
         Switch user status and log time
         '''
         self.status[userid]["sess_status"] = stat
-        self.status[userid]["sess_time"] = time.time()
-        print(f'User {userid} status update `{status}`')
+        self.status[userid]["sess_time"] = datetime.now()
+        print(f'User {userid} status update `{status}` @ {datetime.now()}')
+
+    def get_users(self):
+        '''
+        Returns all users in session as a list
+        '''
+        users = []
+        for user in self.status:
+            users.append(user)
+        return users
 
 # Unit test for log or session
 if __name__ == "__main__":

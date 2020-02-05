@@ -88,7 +88,12 @@ def high_temp():
 
 @app.route("/api/event_push_news")
 def push_news():
-    #TODO: Trigger push_news
+    users = session.get_users()
+    for userid in users:
+        print(f'User: {userid}')
+        stat = 's2s0'
+        session.switch_status(userid, stat)
+        responder.push_news_resp(userid)
     pass
 
 ##############################
@@ -173,6 +178,14 @@ def handle_message(event):
 if __name__ == "__main__":
     # Load session
     session.load_session()
+
+    # while True (or trigger time):
+        # if time == 20:00: 
+            # TODO: Run news crawler
+            # got_news = crawl()
+        # if got_news:
+            # TODO: Call news API
+        # break
 
     # Hook interrupt signal
     signal.signal(signal.SIGINT, session.signal_handler)
