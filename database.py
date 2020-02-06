@@ -35,7 +35,7 @@ def connect():
     return conn
 
 # Function factory
-def query(conn, qry, var):
+def query(qry, var):
     '''
     Function for executing `SELECT * FROM table WHERE var0=foo, var1=bar`
     '''
@@ -52,7 +52,7 @@ def query(conn, qry, var):
         conn.close()
         
 
-def update(conn, qry, var):
+def update(qry, var):
     '''
     Function for updating DB
     '''
@@ -78,7 +78,7 @@ def delete(conn, qry, var):
     c.execute(qry, var)
 
 # Other functions
-def log(userid, message, sess):
+def log(conn, userid, message, sess):
     '''
     Log user messages and the replies of bot to DB
     '''
@@ -87,23 +87,54 @@ def log(userid, message, sess):
     time = time.strftime("%Y-%m-%d %H:%M:%S")
     update(conn, qry, (userid, message, time))
 
-def sync(sess):
+def sync(session):
     '''
-    TODO: Sync session dictionary and DB
+    Sync session dictionary and DB
     '''
-    pass
+    # Get all user from DB
+    try:
+        conn = mariadb.connect(**config)
+        c = conn.cursor()
+        qry = "SELECT * FROM mb_user"
+        c.execute(qry)
+        result = c.fetchall()
+    except mariadb.Error as e:
+        print(e)
+
+    users = [r[0] for r in result]
+
+    # Get session dict
+    status = session.status
+
+    # User absent in session
+    for res in result:
+        if res[0] not in status.keys():
+            session.status[res[0]] = {}
+            session.status[userid]["user_name"] = res[1]
+            session.status[userid]["user_bday"] = res[2]
+            session.status[userid]["last_msg"] = None
+            session.status[userid]["sess_status"] = None
+            session.status[userid]["sess_time"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    # User absent in DB
+    for userid in status.keys():
+        if userid not in users:
+            qry = """INSERT INTO mb_user (line_id, user_name, user_bday) VALUES (%s, %s, %s)"""
+            var = (userid, status[userid]["user_name"], status[userid]["user_bday"])
+            update(qry, var)
+    
+    print(f"Done syncing {len(status)} user records")
+
 
 def check_user(name, birth, nric=None):
     '''
     Get user line_id with `user_name` and `user_bday`
     Returns matched line_id
     '''
-    qry = """SELECT line_id FROM mb_user WHERE name=? and birth=?"""
-    result = query(conn, qry, (name, birth))
+    conn = mariadb.connect(**config)
+    qry = """SELECT line_id FROM mb_user WHERE user_name=%s and user_bday=%s"""
+    result = query(qry, (name, birth))
     return result
 
 # Unit test for database
 if __name__ == "__main__":
-    conn = connect()
-    # conn = mariadb.connect(**config)
     pass

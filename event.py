@@ -8,10 +8,12 @@ The script for event (status) handling and check for msg errors
 '''
 # Import required modules
 from opencc import OpenCC
+
 from linebot import (
     LineBotApi, WebhookHandler
 )
-import linebot.models.template
+
+import mysql.connector as mariadb
 
 from datetime import datetime
 import re
@@ -19,7 +21,6 @@ import os
 import sys
 
 import database as db
-import qa_utils
 
 # Setup path for other modules
 sys.path.insert(0, os.path.dirname(
@@ -36,17 +37,19 @@ if is_development:
 ##############################
 # Scenario R: Registration flow
 ##############################
-def registration(userid, message, session):
+def registration(event, session):
     '''
     This is the main function for the registration flow
     Updates the sessionion dictionary and returns status of user
     '''
-    # Initialize Database Connection and Query
-    conn = db.connect()
+    # Initialize variables
+    userid = event.source.user_id
+    message = event.message.text
+    status = session.status[userid]['sess_status']
 
     qry = """SELECT * FROM mb_user WHERE line_id=%s"""
-    result = db.query(conn, qry, (userid,))
-    print(result)
+    result = db.query(qry, (userid,))
+    # print(result)
 
     # New userid detected (not in sessionion)
     if session.status[userid]['sess_status'] == 'r':
@@ -76,8 +79,13 @@ def registration(userid, message, session):
             session.status[userid]["user_bday"] = birthdate
             session.switch_status(userid, 'r2')
             # TODO: Add user to DB
-            qry = """INSERT INTO mb_user (line_id, name, birth) VALUES %s, %s, %s"""
-            update(conn, qry, (userid, name, birth))
+            name = session.status[userid]['user_name']
+            try:
+                conn = db.connect()
+                qry = """INSERT INTO mb_user (line_id, user_name, user_bday) VALUES (%s, %s, %s)"""
+                db.update(qry, (userid, name, birthdate))
+            except mariadb.Error as e:
+                print('DB Error')
             return 'r2'
         else:
             return "r_err"
@@ -91,46 +99,59 @@ def registration(userid, message, session):
 # qa0: User asks(sends) a question
 # qa1: User replies if answer matched question
 ##############################
-def qa(userid, status, session):
+def qa(event, session):
     '''
     Event handler for QA
     '''
+
+    T = ["有", "要", "有喔", "有阿", "好", "好喔", "好阿", "可",
+         "可以", "可以阿", "Yes", "有一點", "一點", "一點點", "是"]
+    F = ["沒有", "不要", "不", "沒", "No", "無", "否"
+         "不用", "曾經有", "曾經", "以前有", "以前", "不是"]
+
+    userid = event.source.user_id
+    text = event.message.text
+    status = session.get_status(userid)
+
     if status == 'qa0':
         session.switch_status(userid, 'qa1')
         return 'qa1'
+
     elif status == 'qa1':
-        # TODO: Find keyword and similarity here
-        session.switch_status(userid, 'qa2')
-        return 'qa2'
+        if text in T:
+            session.switch_status(userid, 'qa2_t')
+            return 'qa2_t'
+        elif text in F:
+            session.switch_status(userid, 'qa2_f')
+            return 'qa2_f'
+        else:
+            return 'qa1_err'
+
+    elif status == 'qa2_f':
+        session.switch_status(userid, 'qa3')
+        return 'qa3'
 
 ##############################
 # Scenario 1: Detected high temperature from user smart-band
 ##############################
 # TODO: change inputs
-def high_temp(userid, session, message=None):
+def high_temp(event, session):
     '''
     High temperature event handler and push message
     '''
+    userid = event.source.user_id
+    message = event.message.text
     status = session.status[userid]['sess_status']
 
     trad2sim = OpenCC("t2s")
     sim2trad = OpenCC("s2t")
 
+    symptom = ['皮膚出疹','眼窩痛','喉嚨痛','咳嗽','咳血痰','肌肉酸痛']
+
     T = ["有", "要", "有喔", "有阿", "好", "好喔", "好阿", "可",
          "可以", "可以阿", "Yes", "有一點", "一點", "一點點", "是"]
     F = ["沒有", "不要", "不", "沒", "No", "無", "否"
          "不用", "曾經有", "曾經", "以前有", "以前"]
-
-    def ner_wrapper(text):
-        # trad to simp
-        text = trad2sim.convert(text)
-        # get ner result
-        entities = evaluate_text(text)
-        # check result
-        if len(entities) > 0:
-            for idx, ent in enumerate(entities):
-                entities[idx] = sim2trad.convert(ent)
-        return entities
 
     if status == 's1':
         # API triggered, will ask if not feeling well
@@ -174,17 +195,17 @@ def high_temp(userid, session, message=None):
             status = 's1d5'
             session.switch_status(userid, status)
             return status
-        elif msg == symptom[6]:
-            status = 's1d6'
+        else:
+            status = 's1df'
             session.switch_status(userid, status)
             return status
     
-    elif status in ['s1d0', 's1d1', 's1d2', 's1d3', 's1d4', 's1d5', 's1d6']:
-        if msg in T:
+    elif status in ['s1d0', 's1d1', 's1d2', 's1d3', 's1d4', 's1d5']:
+        if message in T:
             status = 's1s2'
             session.switch_status(userid, status)
             return status
-        elif msg in F:
+        elif message in F:
             status = 's1f2'
             session.switch_status(userid, status)
             return status
@@ -197,15 +218,14 @@ def high_temp(userid, session, message=None):
 ##############################
 # Scenario 2: Push news to user from CDC.gov.tw
 ##############################
+'''
 def push_news():
     # TODO: Prerequisites - Run crawler at specific time
     # TODO: Push news flow
 
     # 2. If there is news, push news and ask for location
     # if news:
-        
-        
-
     entities = ner_wrapper(msg)
     entities = "\n".join(set(entities))
     pass
+'''

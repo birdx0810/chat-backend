@@ -87,7 +87,7 @@ class Session():
         self.status[userid]["user_bday"] = None
         self.status[userid]["last_msg"] = None
         self.status[userid]["sess_status"] = 'r'
-        self.status[userid]["sess_time"] = datetime.now()
+        self.status[userid]["sess_time"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         print(f'New user: {userid}')
 
     def get_status(self, userid):
@@ -110,7 +110,7 @@ class Session():
         '''
         self.status[userid]["sess_status"] = status
         self.status[userid]["sess_time"] = datetime.now()
-        print(f'User {userid} status update `{status}` @ {datetime.now()}')
+        print(f'User {userid} status update `{status}` @ {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}')
 
     def get_users(self):
         '''
@@ -123,4 +123,8 @@ class Session():
 
 # Unit test for log or session
 if __name__ == "__main__":
+    import database as db
+    session = Session()
+    session.load_session()
+    db.sync(session)
     pass

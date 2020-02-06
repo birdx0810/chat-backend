@@ -1,7 +1,7 @@
 # -*- coding: UTF-8 -*-
 # Import 3rd-Party Dependencies
 from flask import (
-    Flask, escape, request, redirect, url_for
+    Flask, abort, escape, request, redirect, url_for
 )
 
 from linebot import (
@@ -15,7 +15,7 @@ from linebot.models import (
 )
 
 # Import system modules
-import logging, signal, sys, os
+import datetime, logging, signal, sys, os
 
 # Import local modules
 import database as db
@@ -80,13 +80,14 @@ def high_temp():
         # sess.session_update_dialogue(userid,dialogue_code)
         # line_bot_api.push_message(userid, message)
 
+        userid = userid[0][0]
         print(f'User: {userid}')
         stat = 's1s0'
         session.switch_status(userid, stat)
-        responder.high_temp_resp(userid, stat)
+        responder.high_temp_resp(userid, session)
         return "OK"
 
-@app.route("/api/event_push_news")
+@app.route("/event_push_news")
 def push_news():
     users = session.get_users()
     for userid in users:
@@ -113,39 +114,39 @@ def handle_message(event):
     userid = event.source.user_id
     usermsg = event.message.text
 
+    # TODO: check timeout
+    stat = session.get_status(userid)
+
     # Log user metadata
     print(f'User: {userid}')
     print(f'Message: {usermsg}')
-
-    # Check user status
-    stat = session.get_status(userid)
-    print(f'Status: {stat}')
+    print(f'Status: {stat}\n')
 
     # User in registration
     if stat in ["r", "r0", "r1", "r2", "r_err"]:
-        stat = e.registration(userid, usermsg, session)
-        print(f'User: {userid}\nStatus Update: {stat}')
+        stat = e.registration(event, session)
         responder.registration_resp(event, stat, session)
-
+    
     # TODO: User in scenario 1
-    elif stat in ["s1s1", "s1d1", "s1d2", "s1d3", "s1d4", "s1d5", "s1d6", "s1s2", "s1s3", "s1s4"]:
+    elif stat in ["s1s0", "s1s1", "s1d0", "s1d1", "s1d2", "s1d3", "s1d4", "s1d5", "s1d6", "s1s2", "s1s3", "s1s4"]:
         # Respond first then push...
-        stat = e.high_temp(userid, usermsg, session)
-        responder.high_temp(event, stat, session)
+        stat = e.high_temp(event, session)
+        responder.high_temp_resp(userid, session, event)
 
     # TODO: User in scenario 2
     elif stat in ["s2s1", "s2s2", "s2s3"]:
         stat = e.push_news(userid, usermsg, session)
-        responder.push_news(event, stat, session)
+        responder.push_news_resp(event, session)
 
     # TODO: User trigger QA
-    elif msg == '\qa':
+    elif usermsg == '/qa':
         stat = 'qa0'
         session.switch_status(userid, stat)
-        responder.qa_resp(event, stat, session)
-    elif stat in ["qa0", "qa1", "qa2"]:
-        stat = e.qa(userid, usermsg, session)
-        responder.qa_resp(event, stat, session)
+        responder.qa_resp(event, session)
+
+    elif stat in ["qa0", "qa1", "qa2_t", "qa2_f"]:
+        stat = e.qa(event, session)
+        responder.qa_resp(event, session)
 
     # TODO: User in chat state (echo)
     else:
@@ -179,7 +180,12 @@ if __name__ == "__main__":
     # Load session
     session.load_session()
 
-    # while True (or trigger time):
+    while True: # (or trigger time)
+        sleep(3600*30)
+        time = datetime.datetime.now().strftime("%H:%M")
+        if time == "20:00":
+            db.sync(session)
+            
         # if time == 20:00: 
             # TODO: Run news crawler
             # got_news = crawl()

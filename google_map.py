@@ -58,12 +58,12 @@ def searchHospital(lat, lng, kw, GOOGLE_API_KEY ,searchtype):
     return allhospital
     
 
-def get_hospitals(lat, lng, keyword, GOOGLE_API_KEY='AIzaSyCE-XxvXrHO2rmzhoH5Aud4bKk1Jq5o0bw', searchtype = ''):
+def get_hospitals(lat, lng, keyword, GOOGLE_API_KEY='AIzaSyBfl9pJ1nJJuoidn_WMIGxfUVtN9x2GHCE', searchtype = ''):
     # 经纬度，keyword，apikey，搜索类型例如hospital
     allhospitals = searchHospital(lat, lng, keyword, GOOGLE_API_KEY, searchtype)
     return allhospitals[:5]
 
-def get_address(address, keyword, GOOGLE_API_KEY='AIzaSyCE-XxvXrHO2rmzhoH5Aud4bKk1Jq5o0bw', searchtype = ''):
+def get_address(address, keyword, GOOGLE_API_KEY='AIzaSyBfl9pJ1nJJuoidn_WMIGxfUVtN9x2GHCE', searchtype = ''):
     # 经纬度，keyword，apikey，搜索类型例如hospital
     lat, log = transformAddress(address, GOOGLE_API_KEY)
     allhospitals = searchHospital(lat, log, Keyword, GOOGLE_API_KEY ,searchtype)
