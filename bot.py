@@ -150,7 +150,7 @@ def handle_message(event):
         stat = e.qa(event, session)
         responder.qa_resp(event, session)
 
-    # TODO: User in chat state (echo)
+    # TODO: User in chat state (unable to communicate)
     else:
         line_bot_api.reply_message(
             event.reply_token,

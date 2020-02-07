@@ -51,7 +51,6 @@ def query(qry, var):
         c.close()
         conn.close()
 
-
 def update(qry, var):
     '''
     Function for updating DB
@@ -107,21 +106,24 @@ def sync(session):
     status = session.status
 
     # User absent in session
-    for res in result:
-        if res[0] not in status.keys():
-            session.status[res[0]] = {}
-            session.status[res[0]]["user_name"] = res[1]
-            session.status[res[0]]["user_bday"] = res[2]
-            session.status[res[0]]["last_msg"] = None
-            session.status[res[0]]["sess_status"] = None
-            session.status[res[0]]["sess_time"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            session.save_session()
-    # User absent in DB
-    for userid in status.keys():
-        if userid not in users:
-            qry = """INSERT INTO mb_user (line_id, user_name, user_bday) VALUES (%s, %s, %s)"""
-            var = (userid, status[userid]["user_name"], status[userid]["user_bday"])
-            update(qry, var)
+    try:
+        for res in result:
+            if res[0] not in status.keys():
+                session.status[res[0]] = {}
+                session.status[res[0]]["user_name"] = res[1]
+                session.status[res[0]]["user_bday"] = res[2]
+                session.status[res[0]]["last_msg"] = None
+                session.status[res[0]]["sess_status"] = None
+                session.status[res[0]]["sess_time"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                session.save_session()
+        # User absent in DB
+        for userid in status.keys():
+            if userid not in users:
+                qry = """INSERT INTO mb_user (line_id, user_name, user_bday) VALUES (%s, %s, %s)"""
+                var = (userid, status[userid]["user_name"], status[userid]["user_bday"])
+                update(qry, var)
+    except:
+        print("An error has occured while syncing")
 
     print(f"Done syncing {len(status)} user records")
 
