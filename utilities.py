@@ -55,6 +55,7 @@ class Session():
         '''
         Saves the session state when process is killed
         '''
+        print(f'\nPressed Ctrl+C')
         self.save_session()
         sys.exit(0)
 

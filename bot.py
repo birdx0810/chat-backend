@@ -180,19 +180,6 @@ if __name__ == "__main__":
     # Load session
     session.load_session()
 
-    while True: # (or trigger time)
-        time.sleep(3600*30)
-        time = datetime.datetime.now().strftime("%H:%M")
-        if time == "20:00":
-            db.sync(session)
-
-        # if time == 20:00:
-            # TODO: Run news crawler
-            # got_news = crawl()
-        # if got_news:
-            # TODO: Call news API
-        # break
-
     # Hook interrupt signal
     signal.signal(signal.SIGINT, session.signal_handler)
 
@@ -200,3 +187,15 @@ if __name__ == "__main__":
     port = int(os.environ.get('PORT', 8080))
     app.run(host='0.0.0.0', port=port)
 
+    # Call function at apointed time
+    while True:
+        time.sleep(3600*30)
+        time = datetime.datetime.now().strftime("%H:%M")
+        if time == "00:00":
+            db.sync(session)
+        # if time == 20:00:
+            # TODO: Run news crawler
+            # got_news = crawl()
+        # if got_news:
+            # TODO: Call news API
+        # break
