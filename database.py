@@ -50,7 +50,7 @@ def query(qry, var):
     finally:
         c.close()
         conn.close()
-        
+
 
 def update(qry, var):
     '''
@@ -110,18 +110,18 @@ def sync(session):
     for res in result:
         if res[0] not in status.keys():
             session.status[res[0]] = {}
-            session.status[userid]["user_name"] = res[1]
-            session.status[userid]["user_bday"] = res[2]
-            session.status[userid]["last_msg"] = None
-            session.status[userid]["sess_status"] = None
-            session.status[userid]["sess_time"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            session.status[res[0]]["user_name"] = res[1]
+            session.status[res[0]]["user_bday"] = res[2]
+            session.status[res[0]]["last_msg"] = None
+            session.status[res[0]]["sess_status"] = None
+            session.status[res[0]]["sess_time"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     # User absent in DB
     for userid in status.keys():
         if userid not in users:
             qry = """INSERT INTO mb_user (line_id, user_name, user_bday) VALUES (%s, %s, %s)"""
             var = (userid, status[userid]["user_name"], status[userid]["user_bday"])
             update(qry, var)
-    
+
     print(f"Done syncing {len(status)} user records")
 
 
