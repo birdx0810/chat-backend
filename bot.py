@@ -15,7 +15,7 @@ from linebot.models import (
 )
 
 # Import system modules
-import datetime, logging, signal, sys, os
+import datetime, time, logging, signal, sys, os
 
 # Import local modules
 import database as db
@@ -74,7 +74,7 @@ def high_temp():
         userid = db.check_user(data['name'], data['birth'])
         if userid is None:
             return abort(400, 'Bad Request: User not found')
-        
+
         # (condition.condition_diagnosis)
         # dialogue_code, message = res.condition_diagnosis.greeting()
         # sess.session_update_dialogue(userid,dialogue_code)
@@ -126,7 +126,7 @@ def handle_message(event):
     if stat in ["r", "r0", "r1", "r2", "r_err"]:
         stat = e.registration(event, session)
         responder.registration_resp(event, stat, session)
-    
+
     # TODO: User in scenario 1
     elif stat in ["s1s0", "s1s1", "s1d0", "s1d1", "s1d2", "s1d3", "s1d4", "s1d5", "s1d6", "s1s2", "s1s3", "s1s4"]:
         # Respond first then push...
@@ -181,12 +181,12 @@ if __name__ == "__main__":
     session.load_session()
 
     while True: # (or trigger time)
-        sleep(3600*30)
+        time.sleep(3600*30)
         time = datetime.datetime.now().strftime("%H:%M")
         if time == "20:00":
             db.sync(session)
-            
-        # if time == 20:00: 
+
+        # if time == 20:00:
             # TODO: Run news crawler
             # got_news = crawl()
         # if got_news:
