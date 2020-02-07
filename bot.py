@@ -29,7 +29,7 @@ import utilities, responder
 app = Flask(__name__)
 
 # Is development or production
-is_development=True
+is_development=False
 if is_development:
     # Channel Access Token
     line_bot_api = LineBotApi('XEQclTuSIm6/pcNNB4W9a2DDX/KAbCBmZS4ltBl+g8q2IxwJyqdtgNNY9KtJJxfkuXbHmSdQPAqRWjAciP2IZgrvLoF3ZH2C2Hg+zZMgoy/xM/RbnoFa2eO9GV2F4E1qmjYxA0FbJm1uZkUms9o+4QdB04t89/1O/w1cDnyilFU=')
@@ -146,7 +146,7 @@ def handle_message(event):
         session.switch_status(userid, stat)
         responder.qa_resp(event, session)
 
-    elif stat in ["qa0", "qa1", "qa2_t", "qa2_f"]:
+    elif stat in ["qa0", "qa1", "qa2_t", "qa2_f", "qa3"]:
         stat = e.qa(event, session)
         responder.qa_resp(event, session)
 

@@ -29,7 +29,7 @@ import templates as t
 # Application & variable initialization
 ##############################
 # Is development or production
-is_development=True
+is_development=False
 if is_development:
     # Channel Access Token
     line_bot_api = LineBotApi('XEQclTuSIm6/pcNNB4W9a2DDX/KAbCBmZS4ltBl+g8q2IxwJyqdtgNNY9KtJJxfkuXbHmSdQPAqRWjAciP2IZgrvLoF3ZH2C2Hg+zZMgoy/xM/RbnoFa2eO9GV2F4E1qmjYxA0FbJm1uZkUms9o+4QdB04t89/1O/w1cDnyilFU=')
@@ -99,7 +99,7 @@ def qa_resp(event, session):
             event.reply_token,
             TextSendMessage(text=msg)
         )
-    
+
     elif status == 'qa1':
         found = False
         # Keyword matching
@@ -133,7 +133,7 @@ def qa_resp(event, session):
             TextSendMessage(text=msg)
         )
         pass
-    
+
     elif status == 'qa2_t':
         msg = "感謝你的回饋。很高興可以幫到你～"
         session.switch_status(userid, None)
@@ -173,7 +173,7 @@ def high_temp_resp(userid, session, event=None):
         msg = "您好，手環資料顯示您的體溫似乎比較高，請問您有不舒服的情形嗎？"
         ask_status = t.tf_template(msg)
         line_bot_api.push_message(userid, ask_status)
-    
+
     # Status 1 - Ask if feeling sick
     elif status == 's1s1':
         # If true (not feeling well), ask for symptoms
@@ -232,7 +232,7 @@ def high_temp_resp(userid, session, event=None):
         )
         session.switch_status(userid, None)
 
-    # Status 3: Ask for location 
+    # Status 3: Ask for location
     elif status == 's1s2':
         # If replies to ask for nearby clinic
         msg = "請將您目前的位置傳送給我～"
@@ -283,7 +283,7 @@ def push_news_resp(event, session):
         msg = "因為您所在的地區有確診案例，請問您有不舒服的狀況嗎？"
         line_bot_api.reply_message(
             event.reply_token,
-            
+
         )
         pass
     elif status == 's2f1':
