@@ -115,6 +115,7 @@ def sync(session):
             session.status[res[0]]["last_msg"] = None
             session.status[res[0]]["sess_status"] = None
             session.status[res[0]]["sess_time"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            session.save_session()
     # User absent in DB
     for userid in status.keys():
         if userid not in users:
