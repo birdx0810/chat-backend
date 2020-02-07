@@ -154,7 +154,7 @@ def handle_message(event):
     else:
         line_bot_api.reply_message(
             event.reply_token,
-            TextSendMessage(text=event.message.text)
+            TextSendMessage(text="不好意思，我還不會講話...")
         )
 
 # Sticker message handler (echo)
