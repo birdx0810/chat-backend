@@ -136,6 +136,10 @@ def qa_resp(event, session):
 
     elif status == 'qa2_t':
         msg = "感謝你的回饋。很高興可以幫到你～"
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text=msg)
+        )
         session.switch_status(userid, None)
 
     elif status == 'qa2_f':
