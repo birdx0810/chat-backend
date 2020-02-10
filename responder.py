@@ -151,8 +151,6 @@ def qa_resp(event, session):
 
     elif status == 'qa3':
         for keys, values in t.qa_dict.items():
-            print(f'Question: {values[0]}')
-            print(f'Reply: {text}')
             if text == values[0]:
                 msg = f"你想問的問題可能是:\n{repr(values[0])}\n\n我們的回答是:\n{repr(values[1])}\n\n感謝您的回饋。"
                 break
