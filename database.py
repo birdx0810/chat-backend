@@ -140,4 +140,13 @@ def check_user(name, birth, nric=None):
 
 # Unit test for database
 if __name__ == "__main__":
-    pass
+    qry = "SELECT * FROM mb_user"
+    try:
+        conn = mariadb.connect(**config)
+        c = conn.cursor()
+        c.execute(qry)
+        results = c.fetchall()
+    finally:
+        c.close()
+        conn.close()
+    print(results)
