@@ -1,7 +1,7 @@
 # -*- coding: UTF-8 -*-
 # Import 3rd-Party Dependencies
 from flask import (
-    Flask, abort, escape, request, redirect, url_for
+    Flask, abort, escape, request, redirect, url_for, jsonify
 )
 
 from linebot import (
@@ -16,6 +16,7 @@ from linebot.models import (
 
 # Import system modules
 import datetime, time, logging, signal, sys, os
+import json
 
 # Import local modules
 import database as db
@@ -98,6 +99,17 @@ def push_news():
         session.switch_status(userid, stat)
         responder.push_news_resp(userid)
     pass
+
+@app.route("/backend_api/users", methods=['POST'])
+def get_user():
+    #TODO: Verify request from backend
+    users = db.get_users()
+    return jsonify(users)
+
+def get_msgs():
+    #TODO: Verify request from backend
+    messages = db.get_messages()
+    return jsonify(messages)
 
 ##############################
 # Message handler

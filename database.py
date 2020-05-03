@@ -127,6 +127,14 @@ def sync(session):
 
     print(f"Done syncing {len(status)} user records")
 
+def get_users():
+    '''
+    Gets the `line_id` and `user_name` for all users
+    '''
+    conn = mariadb.connect(**config)
+    qry = """SELECT line_id, user_name FROM mb_user"""
+    result = query(qry)
+    return result
 
 def check_user(name, birth, nric=None):
     '''

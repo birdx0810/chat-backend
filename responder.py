@@ -267,7 +267,6 @@ def high_temp_resp(userid, session, event=None):
         session.switch_status(userid, None)
         pass
 
-
 def push_news_resp(event, session):
     # TODO: Push medical related news to all users
     # Initialize variables
@@ -282,15 +281,13 @@ def push_news_resp(event, session):
         # 1.2 Push news and ask if in location
         line_bot_api.push_message(userid, news)
         line_bot_api.push_message(userid, ask_location)
-        pass
     elif status == 's2s1':
         # 2.1 If in location with case
         msg = "因為您所在的地區有確診案例，請問您有不舒服的狀況嗎？"
         line_bot_api.reply_message(
             event.reply_token,
-
+            TextSendMessage(text=msg)
         )
-        pass
     elif status == 's2f1':
         # 2.2 If not in the location (end)
         msg = "您所在的位置非疫情區，因此不用太過緊張。若有最新消息將會立即更新讓您第一時間了解！"
