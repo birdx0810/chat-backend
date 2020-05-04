@@ -136,6 +136,15 @@ def get_users():
     result = query(qry)
     return result
 
+def get_messages():
+    '''
+    Gets all messages from database
+    '''
+    conn = mariadb.connect(**config)
+    qry = """SELECT * FROM mb_logs"""
+    result = query(qry)
+    return result
+
 def check_user(name, birth, nric=None):
     '''
     Get user line_id with `user_name` and `user_bday`

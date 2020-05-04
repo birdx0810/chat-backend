@@ -106,6 +106,7 @@ def get_user():
     users = db.get_users()
     return jsonify(users)
 
+@app.route("/backend_api/messages", methods=['POST'])
 def get_msgs():
     #TODO: Verify request from backend
     messages = db.get_messages()
