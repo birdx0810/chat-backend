@@ -51,10 +51,16 @@ def registration(event, session):
     result = db.query(qry, (userid,))
     # print(result)
 
-    # User in DB but Session No Name
+    # Error Catcher
     if session.status[userid]['user_name'] is None:
         db.sync(session)
-        session.switch_status(userid, None)
+        if session.status[userid]['user_name'] is None:
+            session.switch_status(userid, 'r0')
+        elif session.status[userid]['user_bday'] is None:
+            session.switch_status(userid, 'r1')
+        elif session.status[userid]['sess_status'] in ["r", "r0", "r1", "r2", "r_err"]:
+            session.switch_status(userid, None)
+    
     # New userid detected (not in session)
     if session.status[userid]['sess_status'] == 'r':
         session.switch_status(userid, 'r0')
