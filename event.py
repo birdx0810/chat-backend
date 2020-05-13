@@ -55,6 +55,13 @@ def registration(event, session):
     if session.status[userid]['sess_status'] == 'r':
         session.switch_status(userid, 'r0')
         return 'r0'
+    #TODO: Add conditions in case of errors
+    elif not result and userid not in session.status:
+        session.add_status(userid)
+        return 'r0'
+    # No name bug
+    elif session.status[userid]['user_name'] is None:
+        db.sync()
     # Get user Chinese name
     elif not result and session.status[userid]['sess_status'] == 'r0':
         if 2 <= len(message) <= 4 and re.match(r'[\u4e00-\u9fff]{2,4}', message):
@@ -89,10 +96,6 @@ def registration(event, session):
             return 'r2'
         else:
             return "r_err"
-    #TODO: Add conditions in case of errors
-    elif not result and userid not in session.status:
-        session.add_status(userid)
-        return 'r0'
 
 ##############################
 # QA Flow

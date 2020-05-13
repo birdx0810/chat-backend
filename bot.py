@@ -161,6 +161,7 @@ def handle_message(event):
     usermsg = event.message.text
     time = datetime.datetime.now()
     time = time.strftime("%Y-%m-%d %H:%M:%S")
+    print(time)
 
     # TODO: check timeout
     stat = session.get_status(userid)

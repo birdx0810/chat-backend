@@ -110,7 +110,7 @@ class Session():
         Switch user status and log time
         '''
         self.status[userid]["sess_status"] = status
-        self.status[userid]["sess_time"] = datetime.now()
+        self.status[userid]["sess_time"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         print(f'User {userid} status update `{status}` @ {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}')
 
     def get_users(self):
