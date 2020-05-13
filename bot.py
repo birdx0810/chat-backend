@@ -202,11 +202,11 @@ def handle_message(event):
         responder.qa_resp(event, session)
 
     # (DEPRECATED) User in chat state (currently unable to communicate)
-    # else:
-    #     line_bot_api.reply_message(
-    #         event.reply_token,
-    #         TextSendMessage(text="不好意思，我還不會講話...")
-    #     )
+    else:
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text="不好意思，我還不會講話...")
+        )
 
 # Sticker message handler (echo)
 '''
@@ -232,6 +232,7 @@ def handle_message(event):
 if __name__ == "__main__":
     # Load session
     session.load_session()
+    db.sync(session)
 
     # Hook interrupt signal
     signal.signal(signal.SIGINT, session.signal_handler)
