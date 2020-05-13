@@ -53,11 +53,11 @@ def registration(event, session):
 
     # New userid detected (not in sessionion)
     if session.status[userid]['sess_status'] == 'r':
+        # Session No Name Bug
+        if session.status[userid]['user_name'] is None:
+            db.sync()
         session.switch_status(userid, 'r0')
         return 'r0'
-    # No name bug
-    elif session.status[userid]['user_name'] is None:
-        db.sync()
     # Get user Chinese name
     elif not result and session.status[userid]['sess_status'] == 'r0':
         if 2 <= len(message) <= 4 and re.match(r'[\u4e00-\u9fff]{2,4}', message):
