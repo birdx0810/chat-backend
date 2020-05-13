@@ -55,10 +55,6 @@ def registration(event, session):
     if session.status[userid]['sess_status'] == 'r':
         session.switch_status(userid, 'r0')
         return 'r0'
-    #TODO: Add conditions in case of errors
-    elif not result and userid not in session.status:
-        session.add_status(userid)
-        return 'r0'
     # No name bug
     elif session.status[userid]['user_name'] is None:
         db.sync()
@@ -96,6 +92,10 @@ def registration(event, session):
             return 'r2'
         else:
             return "r_err"
+    #TODO: Add conditions in case of errors
+    elif not result and userid not in session.status:
+        session.add_status(userid)
+        return 'r0'
 
 ##############################
 # QA Flow
