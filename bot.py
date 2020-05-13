@@ -104,7 +104,7 @@ def push_news():
 def get_user():
     '''
     - input: none
-    - output: 
+    - output:
         array[{
             username,
             last_content,     //最後一個訊息的內容
@@ -122,7 +122,7 @@ def get_msgs():
         - user_id: string
         - timestamp_offset: timestamp
         - maxAmount: int
-    - output: 
+    - output:
         array[{
             msg_id,
             username,
@@ -165,7 +165,7 @@ def handle_message(event):
     # TODO: check timeout
     stat = session.get_status(userid)
 
-    if stat not None:
+    if stat is not None:
         # Save user message to DB (messages from user == 0)
         db.log(userid, usermsg, direction=0)
         session.status[userid]["last_msg"] = usermsg
