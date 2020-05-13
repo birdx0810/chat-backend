@@ -165,16 +165,14 @@ def handle_message(event):
     # TODO: check timeout
     stat = session.get_status(userid)
 
-    if stat is not None:
-        # Save user message to DB (messages from user == 0)
-        db.log(userid, usermsg, direction=0)
-        session.status[userid]["last_msg"] = usermsg
-        session.status[userid]["sess_time"] = time
-
     # Log user metadata
     print(f'User: {userid}')
     print(f'Message: {usermsg}')
     print(f'Status: {stat}\n')
+
+    db.log(userid, usermsg, direction=0)
+    session.status[userid]["last_msg"] = usermsg
+    session.status[userid]["sess_time"] = time
 
     # User in registration
     if stat in ["r", "r0", "r1", "r2", "r_err"]:
