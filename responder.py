@@ -29,7 +29,7 @@ import templates as t
 # Application & variable initialization
 ##############################
 # Is development or production
-is_development=False
+is_development=True
 if is_development:
     # Channel Access Token
     line_bot_api = LineBotApi('XEQclTuSIm6/pcNNB4W9a2DDX/KAbCBmZS4ltBl+g8q2IxwJyqdtgNNY9KtJJxfkuXbHmSdQPAqRWjAciP2IZgrvLoF3ZH2C2Hg+zZMgoy/xM/RbnoFa2eO9GV2F4E1qmjYxA0FbJm1uZkUms9o+4QdB04t89/1O/w1cDnyilFU=')
