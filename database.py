@@ -81,7 +81,7 @@ def log(userid, message, direction):
     '''
     Log user messages and the replies of bot to DB
     '''
-    qry = "INSERT INTO mb_logs (user_id, message, direction, timestamp) VALUES %s, %s, %s, %s"
+    qry = "INSERT INTO mb_logs (user_id, message, direction, timestamp) VALUES (%s, %s, %s, %s)"
     time = datetime.datetime.now()
     time = time.strftime("%Y-%m-%d %H:%M:%S")
     update(qry, (userid, message, direction, time))
