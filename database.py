@@ -77,14 +77,42 @@ def delete(conn, qry, var):
     c.execute(qry, var)
 
 # Other functions
-def log(conn, userid, message, sess):
+def log(userid, message, direction):
     '''
     Log user messages and the replies of bot to DB
     '''
-    qry = "INSERT INTO mb_logs (user_id, message, reply, timestamp) VALUES %s, %s, %s"
+    qry = "INSERT INTO mb_logs (user_id, message, direction, timestamp) VALUES %s, %s, %s, %s"
     time = datetime.datetime.now()
     time = time.strftime("%Y-%m-%d %H:%M:%S")
-    update(conn, qry, (userid, message, time))
+    update(qry, (userid, message, direction, time))
+
+def get_users():
+    '''
+    Gets the `line_id` and `user_name` for all users
+    '''
+    conn = mariadb.connect(**config)
+    qry = """SELECT line_id, user_name FROM mb_user"""
+    result = query(qry)
+    return result
+
+def get_messages():
+    '''
+    Gets all messages from database
+    '''
+    conn = mariadb.connect(**config)
+    qry = """SELECT * FROM mb_logs"""
+    result = query(qry)
+    return result
+
+def check_user(name, birth, nric=None):
+    '''
+    Get user line_id with `user_name` and `user_bday`
+    Returns matched line_id
+    '''
+    conn = mariadb.connect(**config)
+    qry = """SELECT line_id FROM mb_user WHERE user_name=%s and user_bday=%s"""
+    result = query(qry, (name, birth))
+    return result
 
 def sync(session):
     '''
@@ -126,34 +154,6 @@ def sync(session):
         print("An error has occured while syncing")
 
     print(f"Done syncing {len(status)} user records")
-
-def get_users():
-    '''
-    Gets the `line_id` and `user_name` for all users
-    '''
-    conn = mariadb.connect(**config)
-    qry = """SELECT line_id, user_name FROM mb_user"""
-    result = query(qry)
-    return result
-
-def get_messages():
-    '''
-    Gets all messages from database
-    '''
-    conn = mariadb.connect(**config)
-    qry = """SELECT * FROM mb_logs"""
-    result = query(qry)
-    return result
-
-def check_user(name, birth, nric=None):
-    '''
-    Get user line_id with `user_name` and `user_bday`
-    Returns matched line_id
-    '''
-    conn = mariadb.connect(**config)
-    qry = """SELECT line_id FROM mb_user WHERE user_name=%s and user_bday=%s"""
-    result = query(qry, (name, birth))
-    return result
 
 # Unit test for database
 if __name__ == "__main__":

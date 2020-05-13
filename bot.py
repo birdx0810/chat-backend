@@ -30,7 +30,7 @@ import utilities, responder
 app = Flask(__name__)
 
 # Is development or production
-is_development=False
+is_development=True
 if is_development:
     # Channel Access Token
     line_bot_api = LineBotApi('XEQclTuSIm6/pcNNB4W9a2DDX/KAbCBmZS4ltBl+g8q2IxwJyqdtgNNY9KtJJxfkuXbHmSdQPAqRWjAciP2IZgrvLoF3ZH2C2Hg+zZMgoy/xM/RbnoFa2eO9GV2F4E1qmjYxA0FbJm1uZkUms9o+4QdB04t89/1O/w1cDnyilFU=')
@@ -100,17 +100,48 @@ def push_news():
         responder.push_news_resp(userid)
     pass
 
-@app.route("/backend_api/users", methods=['POST'])
+@app.route("/users", methods=['GET'])
 def get_user():
-    #TODO: Verify request from backend
+    '''
+    - input: none
+    - output: 
+        array[{
+            username,
+            last_content,     //最後一個訊息的內容
+            timestamp,        //最後一個訊息的時間
+        }]
+    '''
+    data = request.json
     users = db.get_users()
     return jsonify(users)
 
-@app.route("/backend_api/messages", methods=['POST'])
+@app.route("/messages", methods=['GET'])
 def get_msgs():
-    #TODO: Verify request from backend
+    '''
+    - input:
+        - user_id: string
+        - timestamp_offset: timestamp
+        - maxAmount: int
+    - output: 
+        array[{
+            msg_id,
+            username,
+            direction,
+            content,
+            timestamp,
+        }]
+    '''
     messages = db.get_messages()
     return jsonify(messages)
+
+@app.route("/send", methods=['POST'])
+def send_msg():
+    #TODO: Verify request from backend
+    data = request.json
+    userid = data["user"]
+    message = data["message"]
+    db.log(userid, usermsg, direction=1)
+    line_bot_api.push_message(userid, message)
 
 ##############################
 # Message handler
@@ -128,6 +159,13 @@ def handle_message(event):
     # Retreive user metadata
     userid = event.source.user_id
     usermsg = event.message.text
+    time = datetime.datetime.now()
+    time = time.strftime("%Y-%m-%d %H:%M:%S")
+
+    # Save user message to DB (messages from user == 0)
+    db.log(userid, usermsg, direction=0)
+    session.status[userid]["last_msg"] = usermsg
+    session.status[userid]["sess_time"] = time
 
     # TODO: check timeout
     stat = session.get_status(userid)
@@ -142,7 +180,7 @@ def handle_message(event):
         stat = e.registration(event, session)
         responder.registration_resp(event, stat, session)
 
-    # TODO: User in scenario 1
+    # User in scenario 1
     elif stat in ["s1s0", "s1s1", "s1d0", "s1d1", "s1d2", "s1d3", "s1d4", "s1d5", "s1d6", "s1s2", "s1s3", "s1s4"]:
         # Respond first then push...
         stat = e.high_temp(event, session)
@@ -153,7 +191,7 @@ def handle_message(event):
         stat = e.push_news(userid, usermsg, session)
         responder.push_news_resp(event, session)
 
-    # TODO: User trigger QA
+    # User trigger QA
     elif usermsg == '/qa':
         stat = 'qa0'
         session.switch_status(userid, stat)
@@ -163,12 +201,12 @@ def handle_message(event):
         stat = e.qa(event, session)
         responder.qa_resp(event, session)
 
-    # TODO: User in chat state (unable to communicate)
-    else:
-        line_bot_api.reply_message(
-            event.reply_token,
-            TextSendMessage(text="不好意思，我還不會講話...")
-        )
+    # (DEPRECATED) User in chat state (currently unable to communicate)
+    # else:
+    #     line_bot_api.reply_message(
+    #         event.reply_token,
+    #         TextSendMessage(text="不好意思，我還不會講話...")
+    #     )
 
 # Sticker message handler (echo)
 '''
@@ -203,11 +241,11 @@ if __name__ == "__main__":
     app.run(host='0.0.0.0', port=port)
 
     # Call function at apointed time
-    while True:
-        time.sleep(3600*30)
-        time = datetime.datetime.now().strftime("%H:%M")
-        if time == "00:00":
-            db.sync(session)
+    # while True:
+    #     time.sleep(3600*30)
+    #     time = datetime.datetime.now().strftime("%H:%M")
+    #     if time == "00:00":
+    #         db.sync(session)
         # if time == 20:00:
             # TODO: Run news crawler
             # got_news = crawl()

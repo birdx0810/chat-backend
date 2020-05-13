@@ -29,7 +29,7 @@ import templates as t
 # Application & variable initialization
 ##############################
 # Is development or production
-is_development=False
+is_development=True
 if is_development:
     # Channel Access Token
     line_bot_api = LineBotApi('XEQclTuSIm6/pcNNB4W9a2DDX/KAbCBmZS4ltBl+g8q2IxwJyqdtgNNY9KtJJxfkuXbHmSdQPAqRWjAciP2IZgrvLoF3ZH2C2Hg+zZMgoy/xM/RbnoFa2eO9GV2F4E1qmjYxA0FbJm1uZkUms9o+4QdB04t89/1O/w1cDnyilFU=')
@@ -41,6 +41,17 @@ else: # Is production
     # Channel Secret
     handler = WebhookHandler('5e438935670953f040569105b3d527e1')
 
+def send(userid, message, session):
+    '''
+    This function wraps the utilties for logging and sending messages
+    '''
+    time = datetime.datetime.now()
+    time = time.strftime("%Y-%m-%d %H:%M:%S")
+
+    line_bot_api.push_message(userid, message)
+    db.log(userid, usermsg, direction=1)    # Save user message to DB (messages to user == 1)
+    session.status[userid]["last_msg"] = message
+    session.status[userid]["sess_time"] = time
 
 def registration_resp(event, status, session):
     '''
