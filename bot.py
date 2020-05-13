@@ -162,13 +162,14 @@ def handle_message(event):
     time = datetime.datetime.now()
     time = time.strftime("%Y-%m-%d %H:%M:%S")
 
-    # Save user message to DB (messages from user == 0)
-    db.log(userid, usermsg, direction=0)
-    session.status[userid]["last_msg"] = usermsg
-    session.status[userid]["sess_time"] = time
-
     # TODO: check timeout
     stat = session.get_status(userid)
+
+    if stat not None:
+        # Save user message to DB (messages from user == 0)
+        db.log(userid, usermsg, direction=0)
+        session.status[userid]["last_msg"] = usermsg
+        session.status[userid]["sess_time"] = time
 
     # Log user metadata
     print(f'User: {userid}')
