@@ -54,6 +54,7 @@ def registration(event, session):
     # User in DB but Session No Name
     if session.status[userid]['user_name'] is None:
         db.sync()
+        session.switch_status(userid, None)
     # New userid detected (not in session)
     if session.status[userid]['sess_status'] == 'r':
         session.switch_status(userid, 'r0')
