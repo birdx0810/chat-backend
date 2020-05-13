@@ -51,11 +51,11 @@ def registration(event, session):
     result = db.query(qry, (userid,))
     # print(result)
 
-    # New userid detected (not in sessionion)
+    # User in DB but Session No Name
+    if session.status[userid]['user_name'] is None:
+        db.sync()
+    # New userid detected (not in session)
     if session.status[userid]['sess_status'] == 'r':
-        # Session No Name Bug
-        if session.status[userid]['user_name'] is None:
-            db.sync()
         session.switch_status(userid, 'r0')
         return 'r0'
     # Get user Chinese name
