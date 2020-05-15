@@ -112,8 +112,8 @@ def get_user():
     - input: none
     - output:
         array[{
-            userid
-            username,
+            user_id
+            user_name,
             last_content,     //最後一個訊息的內容
             timestamp,        //最後一個訊息的時間
         }]
@@ -125,8 +125,8 @@ def get_user():
 
     for userid, username in users:
         temp.append({
-            "userid": userid,
-            "username": username,
+            "user_id": userid,
+            "user_name": username,
             "last_content": session.status[userid]["last_msg"],
             "timestamp": session.status[userid]["sess_time"],
         })
@@ -146,7 +146,8 @@ def get_msgs():
     - output:
         array[{
             msg_id,
-            username,
+            user_id,
+            user_name,
             direction,
             content,
             timestamp,
@@ -154,21 +155,47 @@ def get_msgs():
     '''
     #TODO: Verify request from frontend (Call function)
     data = request.get_json(force=True)
-    user_id = data["user_id"]
-    timestamp_offset = data["timestamp_offset"]
-    max_amount = data["maxAmount"]
-    
+
+    userid = data["user_id"]
+    offset = data["timestamp_offset"]
+    max_amount = data["max_amount"]
+
     messages = db.get_messages(userid)
+    filtered = []
+
+    # Get offset time (-1 == now)
+    if offset == -1:
+        offset = datetime.datetime.now()
+    elif type(offset) is str:
+        offset = datetime.datetime.strptime(offset, "%Y-%m-%d %H:%M:%S")
+
+    # Filter messages that are > timestamp
+    for message in messages:
+        message = list(message)
+        message[4] = datetime.datetime.strptime(message[4], "%Y-%m-%d %H:%M:%S")
+        if message[4] < offset:
+            filtered.append(message)
+
     temp = []
 
-    for count in range(max_amount):
-        temp.append({
-            "msg_id": message[count][0],
-            "username":  session.status[message[count][1]]["user_name"],
-            "content": message[count][2],
-            "direction": message[count][3],
-            "timestamp": message[count][4],
-        })
+    if len(filtered) >= max_amount:
+        for count in range(max_amount):
+            temp.append({
+                "msg_id": filtered[count][0],
+                "user_name":  session.status[filtered[count][1]]["user_name"],
+                "content": filtered[count][2],
+                "direction": filtered[count][3],
+                "timestamp": filtered[count][4].strftime("%Y-%m-%d %H:%M:%S"),
+            })
+    else:
+        for message in filtered:
+            temp.append({
+                "msg_id": message[0],
+                "user_name":  session.status[message[1]]["user_name"],
+                "content": message[2],
+                "direction": message[3],
+                "timestamp": message[4].strftime("%Y-%m-%d %H:%M:%S"),
+            })
 
     response = flask.Response(str(temp))
     response.headers['Access-Control-Allow-Origin'] = '*'
@@ -181,11 +208,16 @@ def send_msg():
     userid = data["user_id"]
     message = data["message"]
     db.log(userid, message, direction=1)
-    
+
     message = TextSendMessage(text=message)
     line_bot_api.push_message(userid, message)
 
-    response = flask.Response("OK")
+    data = {
+        "user_id": userid,
+        "message": data["message"]
+    }
+
+    response = flask.Response(str(data))
     response.headers['Access-Control-Allow-Origin'] = '*'
     return response
 

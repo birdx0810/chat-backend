@@ -85,7 +85,7 @@ def log(userid, message, direction):
     time = datetime.datetime.now()
     time = time.strftime("%Y-%m-%d %H:%M:%S")
     update(qry, (userid, message, direction, time))
-    if direction == 0: 
+    if direction == 0:
         direction = "FROM"
     elif direction == 1:
         direction = "TO"
@@ -105,7 +105,7 @@ def get_messages(userid):
     Gets all messages from database
     '''
     conn = mariadb.connect(**config)
-    qry = """SELECT * FROM mb_logs WHERE userid=%s ORDER BY timestamp ASC"""
+    qry = """SELECT * FROM mb_logs WHERE user_id=%s ORDER BY timestamp DESC"""
     result = query(qry, (userid,))
     return result
 
@@ -165,7 +165,7 @@ def sync(session):
 
 # Unit test for database
 if __name__ == "__main__":
-    results = get_messages()
+    results = get_messages("U96df1b7908bfe4d71970d05f344c7694")
     print(results)
 
     # qry = "SELECT * FROM mb_user"
