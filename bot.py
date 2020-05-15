@@ -171,18 +171,20 @@ def get_msgs():
 @app.route("/send", methods=['POST'])
 def send_msg():
     #TODO: Verify request from frontend (Call function)
-    if request.headers['Content-Type'] != 'application/json':
-        return abort(400, 'Bad Request: Please use `json` format')
-    try:
-        data = request.json
-        userid = data["user"]
-        message = data["message"]
-        db.log(userid, usermsg, direction=1)
-        line_bot_api.push_message(userid, message)
-    except:
-        return abort(500, "Internal Server Error")
-    else:
-        return "OK"
+    #if request.headers['Content-Type'] != 'application/json':
+    #    return abort(400, 'Bad Request: Please use `json` format')
+    data = request.get_json(force=True)
+    print(type(data))
+    userid = data["user_id"]
+    print(type(userid))
+    message = data["message"]
+    print(message)
+    db.log(userid, message, direction=1)
+    line_bot_api.push_message(userid, message)
+
+    response = flask.Response("OK")
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    return response
 
 @app.route("/chg_name", methods=['POST'])
 def chg_name():
