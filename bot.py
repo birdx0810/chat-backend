@@ -118,9 +118,9 @@ def get_user():
     
     for userid, username in users:
         response.append({
-            "username" = username,
-            "last_content" = session.status[userid]["last_msg"],
-            "timestamp" = session.status[userid]["sess_time"],
+            "username": username,
+            "last_content": session.status[userid]["last_msg"],
+            "timestamp": session.status[userid]["sess_time"],
         })
     return response
 
@@ -146,11 +146,11 @@ def get_msgs():
 
     for message in messages:
         response.append({
-            "msg_id" = message[0] ,
-            "username" = message[1] ,
-            "content" = message[2] ,
-            "direction" = message[3] ,
-            "timestamp" = message[4] ,
+            "msg_id": message[0] ,
+            "username": message[1] ,
+            "content": message[2] ,
+            "direction": message[3] ,
+            "timestamp": message[4] ,
         })
 
     return response
