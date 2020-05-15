@@ -85,6 +85,11 @@ def log(userid, message, direction):
     time = datetime.datetime.now()
     time = time.strftime("%Y-%m-%d %H:%M:%S")
     update(qry, (userid, message, direction, time))
+    if direction == 0: 
+        direction = "FROM"
+    elif direction == 1:
+        direction = "TO"
+    print(f"Message {direction} user {userid} saved to DB")
 
 def get_users():
     '''
