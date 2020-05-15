@@ -4,7 +4,7 @@ import flask as flask
 from flask import (
     Flask, abort, escape, request, redirect, url_for, jsonify
 )
-from flask.ext.cors import CORS, cross_origin
+from flask_cors import CORS, cross_origin
 
 from linebot import (
     LineBotApi, WebhookHandler
@@ -104,7 +104,7 @@ def push_news():
         responder.push_news_resp(userid)
     pass
 
-@app.route("/users", methods=['OPTIONS'])
+@app.route("/users", methods=['POST'])
 @cross_origin(origin='*',headers=['Content-Type','Authorization'])
 def get_user():
     '''
@@ -133,7 +133,7 @@ def get_user():
     # response.headers['Access-Control-Allow-Origin'] = '*'
     return response
 
-@app.route("/messages", methods=['OPTIONS'])
+@app.route("/messages", methods=['POST'])
 def get_msgs():
     '''
     - input:
@@ -166,7 +166,7 @@ def get_msgs():
     response.headers['Access-Control-Allow-Origin'] = '*'
     return response
 
-@app.route("/send", methods=['OPTIONS'])
+@app.route("/send", methods=['POST'])
 def send_msg():
     #TODO: Verify request from frontend (Call function)
     if request.headers['Content-Type'] != 'application/json':
@@ -182,13 +182,13 @@ def send_msg():
     else:
         return "OK"
 
-@app.route("/chg_name", methods=['OPTIONS'])
+@app.route("/chg_name", methods=['POST'])
 def chg_name():
     #TODO: Change admin username
 
     pass
 
-@app.route("/chg_pass", methods=['OPTIONS'])
+@app.route("/chg_pass", methods=['POST'])
 def chg_pass():
     #TODO: Change admin password
 
