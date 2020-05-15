@@ -164,12 +164,18 @@ def get_msgs():
 @app.route("/send", methods=['POST'])
 def send_msg():
     #TODO: Verify request from frontend (Call function)
-
-    data = request.json
-    userid = data["user"]
-    message = data["message"]
-    db.log(userid, usermsg, direction=1)
-    line_bot_api.push_message(userid, message)
+    if request.headers['Content-Type'] != 'application/json':
+        return abort(400, 'Bad Request: Please use `json` format')
+    try:
+        data = request.json
+        userid = data["user"]
+        message = data["message"]
+        db.log(userid, usermsg, direction=1)
+        line_bot_api.push_message(userid, message)
+    except:
+        return abort(500, "Internal Server Error")
+    else:
+        return "OK"
 
 @app.route("/chg_name", methods=['POST'])
 def chg_name():
