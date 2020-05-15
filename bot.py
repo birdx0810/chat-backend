@@ -212,12 +212,7 @@ def send_msg():
     message = TextSendMessage(text=message)
     line_bot_api.push_message(userid, message)
 
-    data = {
-        "user_id": userid,
-        "message": data["message"]
-    }
-
-    response = flask.Response(str(data))
+    response = flask.Response("OK")
     response.headers['Access-Control-Allow-Origin'] = '*'
     return response
 
