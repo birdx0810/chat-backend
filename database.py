@@ -92,7 +92,7 @@ def get_users():
     '''
     conn = mariadb.connect(**config)
     qry = """SELECT line_id, user_name FROM mb_user"""
-    result = query(qry)
+    result = query(qry, None)
     return result
 
 def get_messages():
@@ -101,7 +101,7 @@ def get_messages():
     '''
     conn = mariadb.connect(**config)
     qry = """SELECT * FROM mb_logs"""
-    result = query(qry)
+    result = query(qry, None)
     return result
 
 def check_user(name, birth, nric=None):

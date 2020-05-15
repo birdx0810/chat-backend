@@ -112,6 +112,7 @@ def get_user():
         }]
     '''
     #TODO: Verify request from frontend (Call function)
+    
     users = db.get_users()
     response = []
     
@@ -143,14 +144,14 @@ def get_msgs():
     messages = db.get_messages()
     response = []
 
-    # for message in messages:
-    #     response.append({
-    #         "msg_id" = ,
-    #         "username" = ,
-    #         "direction" = ,
-    #         "content" = ,
-    #         "timestamp" = ,
-    #     })
+    for message in messages:
+        response.append({
+            "msg_id" = message[0] ,
+            "username" = message[1] ,
+            "content" = message[2] ,
+            "direction" = message[3] ,
+            "timestamp" = message[4] ,
+        })
 
     return response
 
