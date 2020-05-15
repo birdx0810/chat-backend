@@ -101,7 +101,7 @@ def push_news():
         responder.push_news_resp(userid)
     pass
 
-@app.route("/users", methods=['GET'])
+@app.route("/users", methods=['OPTIONS'])
 def get_user():
     '''
     - input: none
@@ -128,7 +128,7 @@ def get_user():
     response.headers['Access-Control-Allow-Origin'] = '*'
     return response
 
-@app.route("/messages", methods=['GET'])
+@app.route("/messages", methods=['OPTIONS'])
 def get_msgs():
     '''
     - input:
@@ -161,7 +161,7 @@ def get_msgs():
     response.headers['Access-Control-Allow-Origin'] = '*'
     return response
 
-@app.route("/send", methods=['POST'])
+@app.route("/send", methods=['OPTIONS'])
 def send_msg():
     #TODO: Verify request from frontend (Call function)
     if request.headers['Content-Type'] != 'application/json':
@@ -177,13 +177,13 @@ def send_msg():
     else:
         return "OK"
 
-@app.route("/chg_name", methods=['POST'])
+@app.route("/chg_name", methods=['OPTIONS'])
 def chg_name():
     #TODO: Change admin username
 
     pass
 
-@app.route("/chg_pass", methods=['POST'])
+@app.route("/chg_pass", methods=['OPTIONS'])
 def chg_pass():
     #TODO: Change admin password
 
