@@ -177,7 +177,7 @@ def send_msg():
     message = data["message"]
     db.log(userid, message, direction=1)
     
-    message = t.tf_template(message)
+    message = TextSendMessage(text=message)
     line_bot_api.push_message(userid, message)
 
     response = flask.Response("OK")
