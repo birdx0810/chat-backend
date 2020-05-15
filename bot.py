@@ -122,7 +122,7 @@ def get_user():
             "last_content": session.status[userid]["last_msg"],
             "timestamp": session.status[userid]["sess_time"],
         })
-    return response
+    return str(response)
 
 @app.route("/messages", methods=['GET'])
 def get_msgs():
@@ -153,7 +153,7 @@ def get_msgs():
             "timestamp": message[4] ,
         })
 
-    return response
+    return str(response)
 
 @app.route("/send", methods=['POST'])
 def send_msg():
