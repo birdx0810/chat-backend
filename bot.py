@@ -157,7 +157,7 @@ def get_msgs():
             "timestamp": message[4] ,
         })
 
-    response = flask.Response(temp)
+    response = flask.Response(str(temp))
     response.headers['Access-Control-Allow-Origin'] = '*'
     return response
 
