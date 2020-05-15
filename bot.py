@@ -112,17 +112,20 @@ def get_user():
         }]
     '''
     #TODO: Verify request from frontend (Call function)
-    
+
     users = db.get_users()
-    response = []
+    temp = []
     
     for userid, username in users:
-        response.append({
+        temp.append({
             "username": username,
             "last_content": session.status[userid]["last_msg"],
             "timestamp": session.status[userid]["sess_time"],
         })
-    return str(response)
+
+    response = flask.Response(temp)
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    return response
 
 @app.route("/messages", methods=['GET'])
 def get_msgs():
@@ -142,10 +145,10 @@ def get_msgs():
     '''
     #TODO: Verify request from frontend (Call function)
     messages = db.get_messages()
-    response = []
+    temp = []
 
     for message in messages:
-        response.append({
+        temp.append({
             "msg_id": message[0] ,
             "username": message[1] ,
             "content": message[2] ,
@@ -153,7 +156,9 @@ def get_msgs():
             "timestamp": message[4] ,
         })
 
-    return str(response)
+    response = flask.Response(temp)
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    return response
 
 @app.route("/send", methods=['POST'])
 def send_msg():
