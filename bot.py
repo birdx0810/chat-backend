@@ -111,6 +111,7 @@ def get_user():
     - input: none
     - output:
         array[{
+            userid
             username,
             last_content,     //最後一個訊息的內容
             timestamp,        //最後一個訊息的時間
@@ -123,6 +124,7 @@ def get_user():
 
     for userid, username in users:
         temp.append({
+            "userid": userid,
             "username": username,
             "last_content": session.status[userid]["last_msg"],
             "timestamp": session.status[userid]["sess_time"],
