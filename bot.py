@@ -111,9 +111,11 @@ def get_user():
             timestamp,        //最後一個訊息的時間
         }]
     '''
-    data = request.json
+    #TODO: Verify request from frontend (Call function)
     users = db.get_users()
-    return jsonify(users)
+    response = []
+
+    return response
 
 @app.route("/messages", methods=['GET'])
 def get_msgs():
@@ -131,17 +133,31 @@ def get_msgs():
             timestamp,
         }]
     '''
+    #TODO: Verify request from frontend (Call function)
     messages = db.get_messages()
     return jsonify(messages)
 
 @app.route("/send", methods=['POST'])
 def send_msg():
-    #TODO: Verify request from backend
+    #TODO: Verify request from frontend (Call function)
+    
     data = request.json
     userid = data["user"]
     message = data["message"]
     db.log(userid, usermsg, direction=1)
     line_bot_api.push_message(userid, message)
+
+@app.route("/chg_name", methods=['POST'])
+def chg_name():
+    #TODO: Change admin username
+
+    pass
+
+@app.route("/chg_pass", methods=['POST'])
+def chg_pass():
+    #TODO: Change admin password
+
+    pass
 
 ##############################
 # Message handler
