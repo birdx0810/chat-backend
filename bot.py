@@ -143,15 +143,14 @@ def get_msgs():
     messages = db.get_messages()
     response = []
 
-    for message in messages:
-        temp = {
-            "msg_id" = ,
-            "username" = ,
-            "direction" = ,
-            "content" = ,
-            "timestamp" = ,
-        }
-
+    # for message in messages:
+    #     response.append({
+    #         "msg_id" = ,
+    #         "username" = ,
+    #         "direction" = ,
+    #         "content" = ,
+    #         "timestamp" = ,
+    #     })
 
     return response
 
