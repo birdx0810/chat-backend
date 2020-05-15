@@ -100,13 +100,13 @@ def get_users():
     result = query(qry, None)
     return result
 
-def get_messages():
+def get_messages(userid):
     '''
     Gets all messages from database
     '''
     conn = mariadb.connect(**config)
-    qry = """SELECT * FROM mb_logs"""
-    result = query(qry, None)
+    qry = """SELECT * FROM mb_logs WHERE userid=%s ORDER BY timestamp ASC"""
+    result = query(qry, (userid,))
     return result
 
 def check_user(name, birth, nric=None):

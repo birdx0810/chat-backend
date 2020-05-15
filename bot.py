@@ -153,16 +153,21 @@ def get_msgs():
         }]
     '''
     #TODO: Verify request from frontend (Call function)
-    messages = db.get_messages()
+    data = request.get_json(force=True)
+    user_id = data["user_id"]
+    timestamp_offset = data["timestamp_offset"]
+    max_amount = data["maxAmount"]
+    
+    messages = db.get_messages(userid)
     temp = []
 
-    for message in messages:
+    for count in range(max_amount):
         temp.append({
-            "msg_id": message[0] ,
-            "username": message[1] ,
-            "content": message[2] ,
-            "direction": message[3] ,
-            "timestamp": message[4] ,
+            "msg_id": message[count][0],
+            "username":  session.status[message[count][1]]["user_name"],
+            "content": message[count][2],
+            "direction": message[count][3],
+            "timestamp": message[count][4],
         })
 
     response = flask.Response(str(temp))
