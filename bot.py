@@ -124,7 +124,7 @@ def get_user():
             "timestamp": session.status[userid]["sess_time"],
         })
 
-    response = flask.Response(temp)
+    response = flask.Response(str(temp))
     response.headers['Access-Control-Allow-Origin'] = '*'
     return response
 
