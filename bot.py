@@ -207,6 +207,7 @@ def handle_message(event):
             event.reply_token,
             TextSendMessage(text="不好意思，我還不會講話...")
         )
+        db.log(userid, "不好意思，我還不會講話...", direction=1)
 
 # Sticker message handler (echo)
 '''
