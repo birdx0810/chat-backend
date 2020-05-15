@@ -23,6 +23,7 @@ import json
 # Import local modules
 import database as db
 import event as e
+import templates as t
 import utilities, responder
 
 ##############################
@@ -171,15 +172,11 @@ def get_msgs():
 @app.route("/send", methods=['POST'])
 def send_msg():
     #TODO: Verify request from frontend (Call function)
-    #if request.headers['Content-Type'] != 'application/json':
-    #    return abort(400, 'Bad Request: Please use `json` format')
     data = request.get_json(force=True)
-    print(type(data))
     userid = data["user_id"]
-    print(type(userid))
     message = data["message"]
-    print(message)
     db.log(userid, message, direction=1)
+    t.tf_template(message)
     line_bot_api.push_message(userid, message)
 
     response = flask.Response("OK")
