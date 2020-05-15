@@ -136,7 +136,6 @@ def sync(session):
     # User absent in session
     try:
         for res in result:
-            print(res)
             if res[0] not in status.keys():
                 session.status[res[0]] = {}
             if session.status[res[0]]["user_name"] == None:
@@ -162,7 +161,7 @@ def sync(session):
 if __name__ == "__main__":
     results = get_messages()
     print(results)
-    
+
     # qry = "SELECT * FROM mb_user"
     # try:
     #     conn = mariadb.connect(**config)

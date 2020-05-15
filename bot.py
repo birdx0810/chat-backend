@@ -1,5 +1,6 @@
 # -*- coding: UTF-8 -*-
 # Import 3rd-Party Dependencies
+import flask as flask
 from flask import (
     Flask, abort, escape, request, redirect, url_for, jsonify
 )
@@ -115,7 +116,7 @@ def get_user():
 
     users = db.get_users()
     temp = []
-    
+
     for userid, username in users:
         temp.append({
             "username": username,
@@ -163,7 +164,7 @@ def get_msgs():
 @app.route("/send", methods=['POST'])
 def send_msg():
     #TODO: Verify request from frontend (Call function)
-    
+
     data = request.json
     userid = data["user"]
     message = data["message"]
