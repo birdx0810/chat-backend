@@ -114,7 +114,13 @@ def get_user():
     #TODO: Verify request from frontend (Call function)
     users = db.get_users()
     response = []
-
+    
+    for userid, username in users:
+        response.append({
+            "username" = username,
+            "last_content" = session.status[userid]["last_msg"],
+            "timestamp" = session.status[userid]["sess_time"],
+        })
     return response
 
 @app.route("/messages", methods=['GET'])
@@ -135,7 +141,19 @@ def get_msgs():
     '''
     #TODO: Verify request from frontend (Call function)
     messages = db.get_messages()
-    return jsonify(messages)
+    response = []
+
+    for message in messages:
+        temp = {
+            "msg_id" = ,
+            "username" = ,
+            "direction" = ,
+            "content" = ,
+            "timestamp" = ,
+        }
+
+
+    return response
 
 @app.route("/send", methods=['POST'])
 def send_msg():
@@ -217,13 +235,15 @@ def handle_message(event):
         stat = e.qa(event, session)
         responder.qa_resp(event, session)
 
-    # (DEPRECATED) User in chat state (currently unable to communicate)
-    else:
-        line_bot_api.reply_message(
-            event.reply_token,
-            TextSendMessage(text="不好意思，我還不會講話...")
-        )
-        db.log(userid, "不好意思，我還不會講話...", direction=1)
+    '''
+    (DEPRECATED) User in chat state (currently unable to communicate)
+    '''
+    # else:
+    #     line_bot_api.reply_message(
+    #         event.reply_token,
+    #         TextSendMessage(text="不好意思，我還不會講話...")
+    #     )
+    #     db.log(userid, "不好意思，我還不會講話...", direction=1)
 
 # Sticker message handler (echo)
 '''

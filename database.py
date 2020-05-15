@@ -160,13 +160,16 @@ def sync(session):
 
 # Unit test for database
 if __name__ == "__main__":
-    qry = "SELECT * FROM mb_user"
-    try:
-        conn = mariadb.connect(**config)
-        c = conn.cursor()
-        c.execute(qry)
-        results = c.fetchall()
-    finally:
-        c.close()
-        conn.close()
+    results = get_messages()
     print(results)
+    
+    # qry = "SELECT * FROM mb_user"
+    # try:
+    #     conn = mariadb.connect(**config)
+    #     c = conn.cursor()
+    #     c.execute(qry)
+    #     results = c.fetchall()
+    # finally:
+    #     c.close()
+    #     conn.close()
+    # print(results)
