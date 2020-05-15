@@ -4,6 +4,7 @@ import flask as flask
 from flask import (
     Flask, abort, escape, request, redirect, url_for, jsonify
 )
+from flask.ext.cors import CORS, cross_origin
 
 from linebot import (
     LineBotApi, WebhookHandler
@@ -29,6 +30,8 @@ import utilities, responder
 ##############################
 # Initialize Flask
 app = Flask(__name__)
+cors = CORS(app, resources={r"/foo": {"origins": "*"}})
+app.config['CORS_HEADERS'] = 'Content-Type'
 
 # Is development or production
 is_development=True
@@ -102,6 +105,7 @@ def push_news():
     pass
 
 @app.route("/users", methods=['OPTIONS'])
+@cross_origin(origin='*',headers=['Content-Type','Authorization'])
 def get_user():
     '''
     - input: none
@@ -125,7 +129,8 @@ def get_user():
         })
 
     response = flask.Response(str(temp))
-    response.headers['Access-Control-Allow-Origin'] = '*'
+    # response.headers['Access-Control-Allow-Methods'] = '*'
+    # response.headers['Access-Control-Allow-Origin'] = '*'
     return response
 
 @app.route("/messages", methods=['OPTIONS'])
