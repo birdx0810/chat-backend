@@ -6,6 +6,10 @@ from flask import (
 )
 from flask_cors import CORS, cross_origin
 
+from flask_socketio import (
+    SocketIO, emit
+)
+
 from linebot import (
     LineBotApi, WebhookHandler
 )
@@ -31,8 +35,10 @@ import utilities, responder
 ##############################
 # Initialize Flask
 app = Flask(__name__)
-cors = CORS(app, resources={r"/foo": {"origins": "*"}})
-app.config['CORS_HEADERS'] = 'Content-Type'
+socketio = SocketIO(app)
+
+# cors = CORS(app, resources={r"/foo": {"origins": "*"}})
+# app.config['CORS_HEADERS'] = 'Content-Type'
 
 # Is development or production
 is_development=True
@@ -201,6 +207,11 @@ def get_msgs():
     response.headers['Access-Control-Allow-Origin'] = '*'
     return response
 
+@socketio.on('Connect to socket', namespace="/sync")
+def handle_connection(json, methods=['GET', 'POST']):
+    print('message was received!!!')
+    socketio.emit('Response', {"data", "OK"})
+
 @app.route("/send", methods=['POST'])
 def send_msg():
     #TODO: Verify request from frontend (Call function)
@@ -327,8 +338,8 @@ if __name__ == "__main__":
 
     # Setup host port
     port = int(os.environ.get('PORT', 8080))
-    app.run(host='0.0.0.0', port=port)
-
+    # app.run(host='0.0.0.0', port=port)
+    socketio.run(app, host='0.0.0.0', port=port, debug=True)
     # Call function at apointed time
     # while True:
     #     time.sleep(3600*30)
