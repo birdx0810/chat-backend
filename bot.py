@@ -39,7 +39,7 @@ import utilities, responder
 app = Flask(__name__)
 cors = CORS(app, resources={r"/foo": {"origins": "*"}})
 app.config['CORS_HEADERS'] = 'Content-Type'
-socketio = SocketIO(app)
+socketio = SocketIO(app, cors_allowed_origins='*')
 
 # Is development or production
 is_development=True
@@ -177,7 +177,7 @@ def get_old_msgs():
 
     data = request.get_json(force=True)
     token = data["auth_token"]
-    assert(auth_valid(token))
+    sucess = auth_valid(token)
 
     userid = data["user_id"]
     offset = data["timestamp_offset"]
@@ -224,10 +224,23 @@ def get_old_msgs():
     response.headers['Access-Control-Allow-Origin'] = '*'
     return response
 
-@socketio.on('Connect to socket', namespace="/sync")
-def handle_connection(json, methods=['GET', 'POST']):
-    print('message was received!!!')
-    socketio.emit('Response', {"data", "OK"})
+def ack():
+    print('SOCKET: ACK')
+
+@socketio.on('connect')
+def handle_connection():
+    try:
+        token = request.args.get('auth_token')
+        assert(auth_valid(token))
+    except:
+        return abort(403, 'Forbidden: Authentication is bad')
+    print('SOCKET: Connected')
+    socketio.emit('Response', {"data": "OK"}, broadcast=True, callback=ack)
+    print('SOCKET: Emitted')
+
+@socketio.on_error() # handles the '/chat' namespace
+def error_handler_chat(e):
+    print(e)
 
 @app.route("/send", methods=['POST'])
 def send_msg():
@@ -245,31 +258,33 @@ def send_msg():
     message = data["message"]
     db.log(userid, message, direction=1)
 
-    message = TextSendMessage(text=message)
-    line_bot_api.push_message(userid, message)
+    line_bot_api.push_message(userid, TextSendMessage(message))
+
+    json = {
+        "user_name": session.status[userid]["user_name"],
+        "content": data["message"],
+        "direction": 1,
+    }
+    print("SOCKET: Sending to Front-End")
+    socketio.emit('Message', json, json=True, broadcast=True, callback=ack)
+    print("SOCKET: Emitted to Front-End")
 
     response = flask.Response("OK")
     response.headers['Access-Control-Allow-Origin'] = '*'
     return response
 
-# Connect to message synchronizer
-@socketio.on("Synchronize New Messages", namespace="/sync")
-def sync_new_msgs(json, methods=['POST']):
-    auth = json["auth_token"]
-    print('received connection request from: ' + auth)
-    socketio.emit('Connection', {"data": "Connection Established"})
-
-@app.route("/chg_name", methods=['POST'])
-def chg_name():
-    #TODO: Change admin username
-
-    pass
-
 @app.route("/chg_pass", methods=['POST'])
 def chg_pass():
     #TODO: Change admin password
+    data = request.get_json(force=True)
+    username = data["username"]
+    psw = data["password"]
 
-    pass
+    result = db.get_admin()
+    for res in result:
+        if res[0] == username and res[1] == psw:
+            success = True
+            break
 
 @app.route("/login", methods=['POST'])
 def log_in():
@@ -277,13 +292,13 @@ def log_in():
     data = request.get_json(force=True)
     username = data["username"]
     psw = data["password"]
-    # Hash password to MD5
 
     result = db.get_admin()
     for res in result:
-        if res[1] == psw:
+        if res[0] == username and res[1] == psw:
             success = True
             break
+        else: success = False
 
     if success:
         token = find_token_of_admin(username)
@@ -306,14 +321,14 @@ def generate_token(username):
     return token
 
 def find_token_of_admin(username):
-    for token, value in auths.keys():
+    for token, value in auths.items():
             if value == username:
-                return t.token
+                return token
     return None
 
 def auth_valid(token):
-    if auths.count() > 0:
-        for key, value in auths.keys():
+    if len(auths.keys()) > 0:
+        for key, value in auths.items():
             if key == token:
                 return True
     else:
@@ -389,6 +404,16 @@ def handle_message(event):
     db.log(userid, usermsg, direction=0)
     session.status[userid]["last_msg"] = usermsg
     session.status[userid]["sess_time"] = time
+
+    # Emit to front-end
+    json = {
+        "user_name": session.status[userid]["user_name"],
+        "content": usermsg,
+        "direction": 0,
+    }
+    print("SOCKET: Sending to Front-End")
+    socketio.emit('Message', json, json=True, broadcast=True, callback=ack)
+    print("SOCKET: Emitted to Front-End")
 
     # User in registration
     if stat in ["r", "r0", "r1", "r2", "r_err"]:
