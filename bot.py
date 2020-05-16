@@ -25,6 +25,8 @@ import database as db
 import event as e
 import templates as t
 import utilities, responder
+import random
+import string
 
 ##############################
 # Application & variable initialization
@@ -227,6 +229,53 @@ def chg_pass():
     #TODO: Change admin password
 
     pass
+
+@app.route("/login", methods=['POST'])
+def log_in():
+    #TODO: Change admin username
+    data = request.get_json(force=True)
+    username = data["username"]
+    psw = data["password"]
+    # check db, is username and psw currect?
+    success = True
+    if success:
+        token = find_token_of_admin(username)
+        if token == None:
+            token = generate_token(username)
+
+        response = flask.Response(token)
+
+    else:
+        response = flask.Response("Failed")
+
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    return response
+
+
+auths = []
+    
+def generate_token(username):
+    size = 15
+    token = ''.join(random.choices(string.ascii_uppercase + string.digits, k=size))
+    auths.append({
+        token: token,
+        username: username
+    })
+    return token
+
+def find_token_of_admin(username):
+    for t in auths:
+            if t.username == username:
+                return t.token
+    return None
+
+def auth_valid(token):
+    if auths.count() > 0:
+        for t in auths:
+            if t.token == token:
+                return True
+
+    return False
 
 ##############################
 # Message handler
