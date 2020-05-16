@@ -37,9 +37,9 @@ import utilities, responder
 ##############################
 # Initialize Flask
 app = Flask(__name__)
+cors = CORS(app, resources={r"/foo": {"origins": "*"}})
+app.config['CORS_HEADERS'] = 'Content-Type'
 socketio = SocketIO(app)
-# cors = CORS(app, resources={r"/foo": {"origins": "*"}})
-# app.config['CORS_HEADERS'] = 'Content-Type'
 
 # Is development or production
 is_development=True
@@ -113,7 +113,7 @@ def push_news():
     pass
 
 @app.route("/users", methods=['POST'])
-@cross_origin(origin='*',headers=['Content-Type','Authorization'])
+# @cross_origin(origin='*',headers=['Content-Type','Authorization'])
 def get_user():
     '''
     - input: none
@@ -126,12 +126,13 @@ def get_user():
         }]
     '''
     #TODO: Verify request from frontend (Call function)
-    try:
-        token = data["auth_token"]
-        assert(auth_valid(token))
-    except:
-        return abort(403, 'Forbidden: Authentication is bad')
-    
+    #try:
+    data = request.get_json(force=True)
+    token = data["auth_token"]
+        #assert(auth_valid(token))
+    #except:
+        #return abort(403, 'Forbidden: Authentication is bad')
+
     users = db.get_users()
     temp = []
 
@@ -144,8 +145,7 @@ def get_user():
         })
 
     response = flask.Response(str(temp))
-    # response.headers['Access-Control-Allow-Methods'] = '*'
-    # response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Origin'] = '*'
     return response
 
 @app.route("/messages", methods=['POST'])
@@ -274,13 +274,13 @@ def log_in():
     username = data["username"]
     psw = data["password"]
     # Hash password to MD5
-    
-    result = db.get_admin(username, psw)
+
+    result = db.get_admin()
     for res in result:
         if res[1] == psw:
             success = True
             break
-        
+
     if success:
         token = find_token_of_admin(username)
         if token == None:
@@ -294,7 +294,7 @@ def log_in():
     return response
 
 auths = {}
-    
+
 def generate_token(username):
     size = 15
     token = ''.join(random.choices(string.ascii_uppercase + string.digits, k=size))
