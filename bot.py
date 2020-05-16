@@ -129,7 +129,7 @@ def get_user():
     #try:
     data = request.get_json(force=True)
     token = data["auth_token"]
-        #assert(auth_valid(token))
+    assert(auth_valid(token))
     #except:
         #return abort(403, 'Forbidden: Authentication is bad')
 
@@ -165,15 +165,19 @@ def get_old_msgs():
             timestamp,
         }]
     '''
-    try:
-        data = request.get_json(force=True)
-    except:
-        return abort(400, 'Bad Request: Error parsing to `json` format')
-    try:
-        token = data["auth_token"]
-        assert(auth_valid(token))
-    except:
-        return abort(403, 'Forbidden: Authentication is bad')
+    # try:
+    #     data = request.get_json(force=True)
+    # except:
+    #     return abort(400, 'Bad Request: Error parsing to `json` format')
+    # try:
+    #     token = data["auth_token"]
+    #     assert(auth_valid(token))
+    # except:
+    #     return abort(403, 'Forbidden: Authentication is bad')
+
+    data = request.get_json(force=True)
+    token = data["auth_token"]
+    assert(auth_valid(token))
 
     userid = data["user_id"]
     offset = data["timestamp_offset"]
