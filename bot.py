@@ -8,10 +8,13 @@ from flask import (
 from flask_socketio import (
     SocketIO, send, emit
 )
+<<<<<<< HEAD
 
 from flask_socketio import (
     SocketIO, emit
 )
+=======
+>>>>>>> 62321b1a58c093424c24c87e0f34008cd500c9e3
 
 from linebot import (
     LineBotApi, WebhookHandler
@@ -460,7 +463,12 @@ if __name__ == "__main__":
     # Setup host port
     port = int(os.environ.get('PORT', 8080))
     # app.run(host='0.0.0.0', port=port)
+<<<<<<< HEAD
     socketio.run(app, host='0.0.0.0', port=port, debug=True)
+=======
+    socketio.run(app, host='0.0.0.0', port=port)
+
+>>>>>>> 62321b1a58c093424c24c87e0f34008cd500c9e3
     # Call function at apointed time
     # while True:
     #     time.sleep(3600*30)
