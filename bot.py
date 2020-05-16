@@ -244,21 +244,16 @@ def send_msg():
     response.headers['Access-Control-Allow-Origin'] = '*'
     return response
 
+@socketio("Establish Socket Connection", namespace="/connect")
+def socket_connection(json, methods=['POST']):
+
+
 # Connect to message synchronizer
 @socketio.on("Synchronize New Messages", namespace="/sync")
 def sync_new_msgs(json, methods=['POST']):
-    # try:
-    #     data = request.get_json(force=True)
-    # except:
-    #     return abort(400, 'Bad Request: Error parsing to `json` format')
-    # try:
-    #     token = data["auth_token"]
-    #     assert(auth_valid(token))
-    # except:
-    #     return abort(403, 'Forbidden: Authentication is bad')
-    print('received my event: ' + str(json))
-    socketio.emit('my response', json, callback=messageReceived)
-    return
+    auth = json["auth_token"]
+    print('received connection request from: ' + auth)
+    socketio.emit('Connection', {"data": "Connection Established"})
 
 @app.route("/chg_name", methods=['POST'])
 def chg_name():
