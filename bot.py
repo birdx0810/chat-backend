@@ -8,13 +8,10 @@ from flask import (
 from flask_socketio import (
     SocketIO, send, emit
 )
-<<<<<<< HEAD
 
 from flask_socketio import (
     SocketIO, emit
 )
-=======
->>>>>>> 62321b1a58c093424c24c87e0f34008cd500c9e3
 
 from linebot import (
     LineBotApi, WebhookHandler
@@ -43,9 +40,9 @@ import string
 ##############################
 # Initialize Flask
 app = Flask(__name__)
-socketio = SocketIO(app)
-# cors = CORS(app, resources={r"/foo": {"origins": "*"}})
-# app.config['CORS_HEADERS'] = 'Content-Type'
+# socketio = SocketIO(app)
+cors = CORS(app, resources={r"/foo": {"origins": "*"}})
+app.config['CORS_HEADERS'] = 'Content-Type'
 
 # Is development or production
 is_development=True
@@ -137,7 +134,7 @@ def get_user():
         assert(auth_valid(token))
     except:
         return abort(403, 'Forbidden: Authentication is bad')
-    
+
     users = db.get_users()
     temp = []
 
@@ -150,11 +147,9 @@ def get_user():
         })
 
     response = flask.Response(str(temp))
-    # response.headers['Access-Control-Allow-Methods'] = '*'
+    response.headers['Access-Control-Allow-Methods'] = '*'
     # response.headers['Access-Control-Allow-Origin'] = '*'
     return response
-
-
 
 @app.route("/messages", methods=['POST'])
 def get_old_msgs():
@@ -228,10 +223,12 @@ def get_old_msgs():
     response.headers['Access-Control-Allow-Origin'] = '*'
     return response
 
+'''
 @socketio.on('Connect to socket', namespace="/sync")
 def handle_connection(json, methods=['GET', 'POST']):
     print('message was received!!!')
     socketio.emit('Response', {"data", "OK"})
+'''
 
 @app.route("/send", methods=['POST'])
 def send_msg():
@@ -256,17 +253,6 @@ def send_msg():
     response.headers['Access-Control-Allow-Origin'] = '*'
     return response
 
-@socketio("Establish Socket Connection", namespace="/connect")
-def socket_connection(json, methods=['POST']):
-
-
-# Connect to message synchronizer
-@socketio.on("Synchronize New Messages", namespace="/sync")
-def sync_new_msgs(json, methods=['POST']):
-    auth = json["auth_token"]
-    print('received connection request from: ' + auth)
-    socketio.emit('Connection', {"data": "Connection Established"})
-
 @app.route("/chg_name", methods=['POST'])
 def chg_name():
     #TODO: Change admin username
@@ -286,6 +272,7 @@ def log_in():
     username = data["username"]
     psw = data["password"]
     # check db, is username and psw currect?
+
     success = True
     if success:
         token = find_token_of_admin(username)
@@ -301,7 +288,7 @@ def log_in():
     return response
 
 auths = {}
-    
+
 def generate_token(username):
     size = 15
     token = ''.join(random.choices(string.ascii_uppercase + string.digits, k=size))
@@ -309,15 +296,15 @@ def generate_token(username):
     return token
 
 def find_token_of_admin(username):
-    for t in auths:
-            if t.username == username:
-                return t.token
+    for key, values in auths.items():
+        if values["username"] == username:
+            return key
     return None
 
 def auth_valid(token):
     if auths.count() > 0:
-        for t in auths:
-            if t.token == token:
+        for key, values in auths.items:
+            if key == token:
                 return True
     else:
         return False
@@ -462,13 +449,9 @@ if __name__ == "__main__":
 
     # Setup host port
     port = int(os.environ.get('PORT', 8080))
-    # app.run(host='0.0.0.0', port=port)
-<<<<<<< HEAD
-    socketio.run(app, host='0.0.0.0', port=port, debug=True)
-=======
-    socketio.run(app, host='0.0.0.0', port=port)
+    app.run(host='0.0.0.0', port=port, debug=True)
+    # socketio.run(app, host='0.0.0.0', port=port, debug=True)
 
->>>>>>> 62321b1a58c093424c24c87e0f34008cd500c9e3
     # Call function at apointed time
     # while True:
     #     time.sleep(3600*30)
