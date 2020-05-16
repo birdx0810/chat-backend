@@ -163,6 +163,12 @@ def sync(session):
 
     print(f"Done syncing {len(status)} user records")
 
+def get_admin():
+    conn = mariadb.connect(**config)
+    qry = """SELECT * FROM mb_admin"""
+    result = query(qry, None)
+    return result
+
 # Unit test for database
 if __name__ == "__main__":
     results = get_messages("U96df1b7908bfe4d71970d05f344c7694")

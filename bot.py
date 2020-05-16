@@ -9,10 +9,6 @@ from flask_socketio import (
     SocketIO, send, emit
 )
 
-from flask_socketio import (
-    SocketIO, emit
-)
-
 from linebot import (
     LineBotApi, WebhookHandler
 )
@@ -25,24 +21,25 @@ from linebot.models import (
 
 # Import system modules
 import datetime, time, logging, signal, sys, os
+import hashlib
 import json
+import random
+import string
 
 # Import local modules
 import database as db
 import event as e
 import templates as t
 import utilities, responder
-import random
-import string
 
 ##############################
 # Application & variable initialization
 ##############################
 # Initialize Flask
 app = Flask(__name__)
-# socketio = SocketIO(app)
-cors = CORS(app, resources={r"/foo": {"origins": "*"}})
-app.config['CORS_HEADERS'] = 'Content-Type'
+socketio = SocketIO(app)
+# cors = CORS(app, resources={r"/foo": {"origins": "*"}})
+# app.config['CORS_HEADERS'] = 'Content-Type'
 
 # Is development or production
 is_development=True
@@ -134,7 +131,7 @@ def get_user():
         assert(auth_valid(token))
     except:
         return abort(403, 'Forbidden: Authentication is bad')
-
+    
     users = db.get_users()
     temp = []
 
@@ -147,7 +144,7 @@ def get_user():
         })
 
     response = flask.Response(str(temp))
-    response.headers['Access-Control-Allow-Methods'] = '*'
+    # response.headers['Access-Control-Allow-Methods'] = '*'
     # response.headers['Access-Control-Allow-Origin'] = '*'
     return response
 
@@ -223,12 +220,10 @@ def get_old_msgs():
     response.headers['Access-Control-Allow-Origin'] = '*'
     return response
 
-'''
 @socketio.on('Connect to socket', namespace="/sync")
 def handle_connection(json, methods=['GET', 'POST']):
     print('message was received!!!')
     socketio.emit('Response', {"data", "OK"})
-'''
 
 @app.route("/send", methods=['POST'])
 def send_msg():
@@ -253,6 +248,13 @@ def send_msg():
     response.headers['Access-Control-Allow-Origin'] = '*'
     return response
 
+# Connect to message synchronizer
+@socketio.on("Synchronize New Messages", namespace="/sync")
+def sync_new_msgs(json, methods=['POST']):
+    auth = json["auth_token"]
+    print('received connection request from: ' + auth)
+    socketio.emit('Connection', {"data": "Connection Established"})
+
 @app.route("/chg_name", methods=['POST'])
 def chg_name():
     #TODO: Change admin username
@@ -271,14 +273,18 @@ def log_in():
     data = request.get_json(force=True)
     username = data["username"]
     psw = data["password"]
-    # check db, is username and psw currect?
-
-    success = True
+    # Hash password to MD5
+    
+    result = db.get_admin(username, psw)
+    for res in result:
+        if res[1] == psw:
+            success = True
+            break
+        
     if success:
         token = find_token_of_admin(username)
         if token == None:
             token = generate_token(username)
-
         response = flask.Response(token)
 
     else:
@@ -288,7 +294,7 @@ def log_in():
     return response
 
 auths = {}
-
+    
 def generate_token(username):
     size = 15
     token = ''.join(random.choices(string.ascii_uppercase + string.digits, k=size))
@@ -296,14 +302,14 @@ def generate_token(username):
     return token
 
 def find_token_of_admin(username):
-    for key, values in auths.items():
-        if values["username"] == username:
-            return key
+    for token, value in auths.keys():
+            if value == username:
+                return t.token
     return None
 
 def auth_valid(token):
     if auths.count() > 0:
-        for key, values in auths.items:
+        for key, value in auths.keys():
             if key == token:
                 return True
     else:
@@ -449,9 +455,8 @@ if __name__ == "__main__":
 
     # Setup host port
     port = int(os.environ.get('PORT', 8080))
-    app.run(host='0.0.0.0', port=port, debug=True)
-    # socketio.run(app, host='0.0.0.0', port=port, debug=True)
-
+    # app.run(host='0.0.0.0', port=port, debug=True)
+    socketio.run(app, host='0.0.0.0', port=port, debug=True)
     # Call function at apointed time
     # while True:
     #     time.sleep(3600*30)
