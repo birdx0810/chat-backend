@@ -1,10 +1,13 @@
 # -*- coding: UTF-8 -*-
 # Import 3rd-Party Dependencies
 import flask as flask
+from flask_cors import CORS, cross_origin
 from flask import (
     Flask, abort, escape, request, redirect, url_for, jsonify
 )
-from flask_cors import CORS, cross_origin
+from flask_socketio import (
+    SocketIO, send, emit
+)
 
 from linebot import (
     LineBotApi, WebhookHandler
@@ -33,8 +36,9 @@ import string
 ##############################
 # Initialize Flask
 app = Flask(__name__)
-cors = CORS(app, resources={r"/foo": {"origins": "*"}})
-app.config['CORS_HEADERS'] = 'Content-Type'
+socketio = SocketIO(app)
+# cors = CORS(app, resources={r"/foo": {"origins": "*"}})
+# app.config['CORS_HEADERS'] = 'Content-Type'
 
 # Is development or production
 is_development=True
@@ -121,7 +125,12 @@ def get_user():
         }]
     '''
     #TODO: Verify request from frontend (Call function)
-
+    try:
+        token = data["auth_token"]
+        assert(auth_valid(token))
+    except:
+        return abort(403, 'Forbidden: Authentication is bad')
+    
     users = db.get_users()
     temp = []
 
@@ -138,8 +147,10 @@ def get_user():
     # response.headers['Access-Control-Allow-Origin'] = '*'
     return response
 
+
+
 @app.route("/messages", methods=['POST'])
-def get_msgs():
+def get_old_msgs():
     '''
     - input:
         - user_id: string
@@ -155,8 +166,15 @@ def get_msgs():
             timestamp,
         }]
     '''
-    #TODO: Verify request from frontend (Call function)
-    data = request.get_json(force=True)
+    try:
+        data = request.get_json(force=True)
+    except:
+        return abort(400, 'Bad Request: Error parsing to `json` format')
+    try:
+        token = data["auth_token"]
+        assert(auth_valid(token))
+    except:
+        return abort(403, 'Forbidden: Authentication is bad')
 
     userid = data["user_id"]
     offset = data["timestamp_offset"]
@@ -205,8 +223,16 @@ def get_msgs():
 
 @app.route("/send", methods=['POST'])
 def send_msg():
-    #TODO: Verify request from frontend (Call function)
-    data = request.get_json(force=True)
+    try:
+        data = request.get_json(force=True)
+    except:
+        return abort(400, 'Bad Request: Error parsing to `json` format')
+    try:
+        token = data["auth_token"]
+        assert(auth_valid(token))
+    except:
+        return abort(403, 'Forbidden: Authentication is bad')
+
     userid = data["user_id"]
     message = data["message"]
     db.log(userid, message, direction=1)
@@ -217,6 +243,22 @@ def send_msg():
     response = flask.Response("OK")
     response.headers['Access-Control-Allow-Origin'] = '*'
     return response
+
+# Connect to message synchronizer
+@socketio.on("Synchronize New Messages", namespace="/sync")
+def sync_new_msgs(json, methods=['POST']):
+    # try:
+    #     data = request.get_json(force=True)
+    # except:
+    #     return abort(400, 'Bad Request: Error parsing to `json` format')
+    # try:
+    #     token = data["auth_token"]
+    #     assert(auth_valid(token))
+    # except:
+    #     return abort(403, 'Forbidden: Authentication is bad')
+    print('received my event: ' + str(json))
+    socketio.emit('my response', json, callback=messageReceived)
+    return
 
 @app.route("/chg_name", methods=['POST'])
 def chg_name():
@@ -251,16 +293,12 @@ def log_in():
     response.headers['Access-Control-Allow-Origin'] = '*'
     return response
 
-
-auths = []
+auths = {}
     
 def generate_token(username):
     size = 15
     token = ''.join(random.choices(string.ascii_uppercase + string.digits, k=size))
-    auths.append({
-        token: token,
-        username: username
-    })
+    auths[token] = username
     return token
 
 def find_token_of_admin(username):
@@ -274,8 +312,47 @@ def auth_valid(token):
         for t in auths:
             if t.token == token:
                 return True
+    else:
+        return False
 
-    return False
+def message_callback(userid):
+    # Get offset time (-1 == now)
+    if offset == -1:
+        offset = datetime.datetime.now()
+    elif type(offset) is str:
+        offset = datetime.datetime.strptime(offset, "%Y-%m-%d %H:%M:%S")
+
+    # Filter messages that are > timestamp
+    for message in messages:
+        message = list(message)
+        message[4] = datetime.datetime.strptime(message[4], "%Y-%m-%d %H:%M:%S")
+        if message[4] < offset:
+            filtered.append(message)
+
+    temp = []
+
+    if len(filtered) >= max_amount:
+        for count in range(max_amount):
+            temp.append({
+                "msg_id": filtered[count][0],
+                "user_name":  session.status[filtered[count][1]]["user_name"],
+                "content": filtered[count][2],
+                "direction": filtered[count][3],
+                "timestamp": filtered[count][4].strftime("%Y-%m-%d %H:%M:%S"),
+            })
+    else:
+        for message in filtered:
+            temp.append({
+                "msg_id": message[0],
+                "user_name":  session.status[message[1]]["user_name"],
+                "content": message[2],
+                "direction": message[3],
+                "timestamp": message[4].strftime("%Y-%m-%d %H:%M:%S"),
+            })
+
+    response = flask.Response(str(temp))
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    return response
 
 ##############################
 # Message handler
@@ -371,12 +448,15 @@ if __name__ == "__main__":
     session.load_session()
     db.sync(session)
 
+    client_status = {}
+
     # Hook interrupt signal
     signal.signal(signal.SIGINT, session.signal_handler)
 
     # Setup host port
     port = int(os.environ.get('PORT', 8080))
-    app.run(host='0.0.0.0', port=port)
+    # app.run(host='0.0.0.0', port=port)
+    socketio.run(app, host='0.0.0.0', port=port)
 
     # Call function at apointed time
     # while True:
