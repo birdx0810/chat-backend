@@ -56,6 +56,7 @@ else: # Is production
 
 # Initialize Session
 session = utilities.Session()
+auths = {}
 
 ##############################
 # API handler
@@ -234,9 +235,9 @@ def handle_connection():
         assert(auth_valid(token))
     except:
         return abort(403, 'Forbidden: Authentication is bad')
-    print('SOCKET: Connected')
-    socketio.emit('Response', {"data": "OK"}, broadcast=True, callback=ack)
-    print('SOCKET: Emitted')
+    print(f'SOCKET: {token} Connected')
+    # socketio.emit('Response', {"data": "OK"}, broadcast=True, callback=ack)
+    # print('SOCKET: Emitted')
 
 @socketio.on_error() # handles the '/chat' namespace
 def error_handler_chat(e):
@@ -311,8 +312,6 @@ def log_in():
 
     response.headers['Access-Control-Allow-Origin'] = '*'
     return response
-
-auths = {}
 
 def generate_token(username):
     size = 15
