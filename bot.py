@@ -224,10 +224,23 @@ def get_old_msgs():
     response.headers['Access-Control-Allow-Origin'] = '*'
     return response
 
-@socketio.on('Connect to socket', namespace="/sync")
-def handle_connection(json, methods=['GET', 'POST']):
-    print('message was received!!!')
-    socketio.emit('Response', {"data", "OK"})
+def ack():
+    print('SOCKET: ACK')
+
+@socketio.on('connect')
+def handle_connection():
+    try:
+        token = request.args.get('auth_token')
+        assert(auth_valid(token))
+    except:
+        return abort(403, 'Forbidden: Authentication is bad')
+    print('SOCKET: Connected')
+    socketio.emit('Response', {"data": "OK"}, broadcast=True, callback=ack)
+    print('SOCKET: Emitted')
+
+@socketio.on_error() # handles the '/chat' namespace
+def error_handler_chat(e):
+    print(e)
 
 @app.route("/send", methods=['POST'])
 def send_msg():
