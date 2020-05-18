@@ -9,6 +9,9 @@ from flask_socketio import (
     SocketIO, send, emit
 )
 
+import eventlet
+eventlet.monkey_patch()
+
 from linebot import (
     LineBotApi, WebhookHandler
 )
@@ -39,7 +42,7 @@ import utilities, responder
 app = Flask(__name__)
 cors = CORS(app, resources={r"/foo": {"origins": "*"}})
 app.config['CORS_HEADERS'] = 'Content-Type'
-socketio = SocketIO(app)
+socketio = SocketIO(app, async_mode='eventlet')
 
 # Is development or production
 is_development=True
@@ -325,7 +328,7 @@ def find_token_of_admin(username):
     return None
 
 def auth_valid(token):
-    if auths.count() > 0:
+    if auths.keys() > 0:
         for key, value in auths.keys():
             if key == token:
                 return True
