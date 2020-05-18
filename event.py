@@ -163,13 +163,13 @@ def high_temp(event, session):
     F = ["沒有", "不要", "不", "沒", "No", "無", "否"
          "不用", "曾經有", "曾經", "以前有", "以前"]
 
-    if status == 's1':
-        # API triggered, will ask if not feeling well
-        session.switch_status(userid, 's1s0')
-        return 's1s0'
+    # if status == 's1':
+    #     # API triggered, will ask if not feeling well
+    #     session.switch_status(userid, 's1s0')
+    #     return 's1s0'
 
-    elif status == 's1s0':
-        # TODO: T/F reply
+    if status == 's1s0':
+        # TODO: # API triggered, will ask if not feeling well (T/F reply)
         if message in T:
             status = 's1s1'
             session.switch_status(userid, status)    

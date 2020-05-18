@@ -287,9 +287,17 @@ def chg_pass():
             break
 
 @app.route("/login", methods=['POST'])
-def log_in():
-    #TODO: Change admin username
-    data = request.get_json(force=True)
+def login():
+    try:
+        data = request.get_json(force=True)
+    except:
+        return abort(400, 'Bad Request: Error parsing to `json` format')
+    try:
+        token = data["auth_token"]
+        assert(auth_valid(token))
+    except:
+        return abort(403, 'Forbidden: Authentication is bad')
+    
     username = data["username"]
     psw = data["password"]
 
@@ -412,7 +420,7 @@ def handle_message(event):
         "direction": 0,
     }
     print("SOCKET: Sending to Front-End")
-    socketio.emit('Message', json, json=True, broadcast=True, callback=ack)
+    s   ssage', json, json=True, broadcast=True, callback=ack)
     print("SOCKET: Emitted to Front-End")
 
     # User in registration
