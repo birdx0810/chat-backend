@@ -10,7 +10,6 @@ from flask_socketio import (
 )
 
 import eventlet
-eventlet.monkey_patch()
 
 from linebot import (
     LineBotApi, WebhookHandler
@@ -42,7 +41,7 @@ import utilities, responder
 app = Flask(__name__)
 cors = CORS(app, resources={r"/foo": {"origins": "*"}})
 app.config['CORS_HEADERS'] = 'Content-Type'
-socketio = SocketIO(app, async_mode='eventlet')
+socketio = SocketIO(app, async_mode='eventlet', cors_allowed_origins='*')
 
 # Is development or production
 is_development=True
@@ -264,16 +263,19 @@ def send_msg():
     message = TextSendMessage(text=message)
     line_bot_api.push_message(userid, message)
 
+    json = {
+        "user_name": session.status[userid]["user_name"],
+        "content": data["message"],
+        "direction": 1,
+    }
+
+    print("SOCKET: Sending to Front-End")
+    socketio.emit('Message', json, json=True, broadcast=True, callback=ack)
+    print("SOCKET: Emitted to Front-End")
+
     response = flask.Response("OK")
     response.headers['Access-Control-Allow-Origin'] = '*'
     return response
-
-# Connect to message synchronizer
-@socketio.on("Synchronize New Messages", namespace="/sync")
-def sync_new_msgs(json, methods=['POST']):
-    auth = json["auth_token"]
-    print('received connection request from: ' + auth)
-    socketio.emit('Connection', {"data": "Connection Established"})
 
 @app.route("/chg_name", methods=['POST'])
 def chg_name():
@@ -293,13 +295,13 @@ def log_in():
     data = request.get_json(force=True)
     username = data["username"]
     psw = data["password"]
-    # Hash password to MD5
 
     result = db.get_admin()
     for res in result:
         if res[1] == psw:
             success = True
             break
+        else: success = False
 
     if success:
         token = find_token_of_admin(username)
@@ -322,14 +324,14 @@ def generate_token(username):
     return token
 
 def find_token_of_admin(username):
-    for token, value in auths.keys():
+    for token, value in auths.items():
             if value == username:
-                return t.token
+                return token
     return None
 
 def auth_valid(token):
-    if auths.keys() > 0:
-        for key, value in auths.keys():
+    if len(auths.keys()) > 0:
+        for key, value in auths.items():
             if key == token:
                 return True
     else:
@@ -405,6 +407,15 @@ def handle_message(event):
     db.log(userid, usermsg, direction=0)
     session.status[userid]["last_msg"] = usermsg
     session.status[userid]["sess_time"] = time
+
+    json = {
+        "user_name": session.status[userid]["user_name"],
+        "content": usermsg,
+        "direction": 0,
+    }
+    print("SOCKET: Sending to Front-End")
+    socketio.emit('Message', json, json=True, broadcast=True, callback=ack)
+    print("SOCKET: Emitted to Front-End")
 
     # User in registration
     if stat in ["r", "r0", "r1", "r2", "r_err"]:
