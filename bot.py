@@ -277,21 +277,8 @@ def send_msg():
     response.headers['Access-Control-Allow-Origin'] = '*'
     return response
 
-@app.route("/chg_name", methods=['POST'])
-def chg_name():
-    #TODO: Change admin username
-
-    pass
-
-@app.route("/chg_pass", methods=['POST'])
-def chg_pass():
-    #TODO: Change admin password
-
-    pass
-
 @app.route("/login", methods=['POST'])
 def log_in():
-    #TODO: Change admin username
     data = request.get_json(force=True)
     username = data["username"]
     psw = data["password"]
@@ -307,7 +294,7 @@ def log_in():
         token = find_token_of_admin(username)
         if token == None:
             token = generate_token(username)
-        response = flask.Response(token)
+        response = flask.Response(response=token, status_code=401)
 
     else:
         response = flask.Response("Failed")
