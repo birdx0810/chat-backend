@@ -178,8 +178,11 @@ def get_old_msgs():
     #     return abort(403, 'Forbidden: Authentication is bad')
 
     data = request.get_json(force=True)
-    token = data["auth_token"]
-    assert(auth_valid(token))
+    try:
+        token = data["auth_token"]
+        assert(auth_valid(token))
+    except:
+        return abort(403, "Forbidden: Authentication is bad")
 
     userid = data["user_id"]
     offset = data["timestamp_offset"]
