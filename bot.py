@@ -210,6 +210,7 @@ def get_old_msgs():
         for count in range(max_amount):
             temp.append({
                 "msg_id": filtered[count][0],
+                "user_id": userid,
                 "user_name":  session.status[filtered[count][1]]["user_name"],
                 "content": filtered[count][2],
                 "direction": filtered[count][3],
@@ -297,7 +298,7 @@ def log_in():
         token = find_token_of_admin(username)
         if token == None:
             token = generate_token(username)
-        response = flask.Response(response=token, status_code=401)
+        response = flask.Response(response=token, status=401)
 
     else:
         response = flask.Response("Failed")
