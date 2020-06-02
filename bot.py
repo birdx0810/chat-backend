@@ -262,10 +262,12 @@ def send_msg():
 
     userid = data["user_id"]
     message = data["message"]
-    db.log(userid, message, direction=1)
-
-    message = TextSendMessage(text=message)
-    line_bot_api.push_message(userid, message)
+    
+    try:
+        message = TextSendMessage(text=message)
+        line_bot_api.push_message(userid, message)
+    except:
+        return abort(400, "Bad request: invalid message")
 
     json = {
         "user_name": session.status[userid]["user_name"],
@@ -273,6 +275,8 @@ def send_msg():
         "content": data["message"],
         "direction": 1,
     }
+
+    db.log(userid, message, direction=1)
 
     print("SOCKET: Sending to Front-End")
     socketio.emit('Message', json, json=True, broadcast=True, callback=ack)
