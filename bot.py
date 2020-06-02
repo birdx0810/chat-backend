@@ -398,19 +398,11 @@ def handle_message(event):
     session.status[userid]["last_msg"] = usermsg
     session.status[userid]["sess_time"] = time
 
-    json = {
-        "user_name": session.status[userid]["user_name"],
-        "content": usermsg,
-        "direction": 0,
-    }
-    print("SOCKET: Sending to Front-End")
-    socketio.emit('Message', json, json=True, broadcast=True, callback=ack)
-    print("SOCKET: Emitted to Front-End")
-
     # User in registration
     if stat in ["r", "r0", "r1", "r2", "r_err"]:
         stat = e.registration(event, session)
         responder.registration_resp(event, stat, session)
+        return
 
     # User in scenario 1
     elif stat in ["s1s0", "s1s1", "s1d0", "s1d1", "s1d2", "s1d3", "s1d4", "s1d5", "s1d6", "s1s2", "s1s3", "s1s4"]:
@@ -432,6 +424,16 @@ def handle_message(event):
     elif stat in ["qa0", "qa1", "qa2_t", "qa2_f", "qa3"]:
         stat = e.qa(event, session)
         responder.qa_resp(event, session)
+
+    json = {
+        "user_name": session.status[userid]["user_name"],
+        "content": usermsg,
+        "direction": 0,
+    }
+
+    print("SOCKET: Sending to Front-End")
+    socketio.emit('Message', json, json=True, broadcast=True, callback=ack)
+    print("SOCKET: Emitted to Front-End")
 
     '''
     (DEPRECATED) User in chat state (currently unable to communicate)
