@@ -269,7 +269,7 @@ def send_msg():
 
     json = {
         "user_name": session.status[userid]["user_name"],
-        "userid": userid,
+        "user_id": userid,
         "content": data["message"],
         "direction": 1,
     }
