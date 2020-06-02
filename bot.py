@@ -269,6 +269,7 @@ def send_msg():
 
     json = {
         "user_name": session.status[userid]["user_name"],
+        "userid": userid,
         "content": data["message"],
         "direction": 1,
     }
@@ -395,10 +396,6 @@ def handle_message(event):
     print(f'Message: {usermsg}')
     print(f'Status: {stat}\n')
 
-    db.log(userid, usermsg, direction=0)
-    session.status[userid]["last_msg"] = usermsg
-    session.status[userid]["sess_time"] = time
-
     # User in registration
     if stat in ["r", "r0", "r1", "r2", "r_err"]:
         stat = e.registration(event, session)
@@ -428,6 +425,7 @@ def handle_message(event):
 
     json = {
         "user_name": session.status[userid]["user_name"],
+        "user_id": userid,
         "content": usermsg,
         "direction": 0,
     }
@@ -435,6 +433,10 @@ def handle_message(event):
     print("SOCKET: Sending to Front-End")
     socketio.emit('Message', json, json=True, broadcast=True, callback=ack)
     print("SOCKET: Emitted to Front-End")
+
+    db.log(userid, usermsg, direction=0)
+    session.status[userid]["last_msg"] = usermsg
+    session.status[userid]["sess_time"] = time
 
     '''
     (DEPRECATED) User in chat state (currently unable to communicate)
