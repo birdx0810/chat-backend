@@ -404,7 +404,10 @@ def handle_message(event):
     if stat in ["r", "r0", "r1", "r2", "r_err"]:
         stat = e.registration(event, session)
         responder.registration_resp(event, stat, session)
-        return
+        
+        db.log(userid, usermsg, direction=0)
+        session.status[userid]["last_msg"] = usermsg
+        session.status[userid]["sess_time"] = time
 
     # User in scenario 1
     elif stat in ["s1s0", "s1s1", "s1d0", "s1d1", "s1d2", "s1d3", "s1d4", "s1d5", "s1d6", "s1s2", "s1s3", "s1s4"]:
