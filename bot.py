@@ -262,7 +262,7 @@ def send_msg():
 
     userid = data["user_id"]
     message = data["message"]
-    
+
     try:
         message = TextSendMessage(text=message)
         line_bot_api.push_message(userid, message)
@@ -390,7 +390,7 @@ def handle_message(event):
     usermsg = event.message.text
     time = datetime.datetime.now()
     time = time.strftime("%Y-%m-%d %H:%M:%S")
-    print(time)
+    print("\n"+time)
 
     # TODO: check timeout
     stat = session.get_status(userid)
