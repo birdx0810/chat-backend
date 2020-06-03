@@ -49,7 +49,7 @@ def registration(event, session):
 
     qry = """SELECT * FROM mb_user WHERE line_id=%s"""
     result = db.query(qry, (userid,))
-
+    # print(result)
     # Error Catcher
     # if session.status[userid]['user_name'] is None:
         # db.sync(session)
@@ -61,7 +61,7 @@ def registration(event, session):
         #     session.switch_status(userid, None)
 
     # If user not in database
-    if result is None:
+    if len(result) is 0:
         # New userid detected (not in session)
         if session.status[userid]['sess_status'] == 'r':
             session.switch_status(userid, 'r0')
@@ -105,7 +105,7 @@ def registration(event, session):
         print(f"User already in database")
         db.sync(session)
 
-    
+
     # if not result and userid not in session.status:
     #     session.add_status(userid)
     #     return 'r0'

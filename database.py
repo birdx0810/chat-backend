@@ -157,6 +157,7 @@ def sync(session):
 
     for user in users:
         tmp = get_last_message(user)
+        # print(tmp)
         messages[tmp[0]] = tmp[1]
 
     # Get session dict
@@ -172,25 +173,28 @@ def sync(session):
                 session.status[res[0]]["last_msg"] = messages[res[0]]
                 session.status[res[0]]["sess_status"] = None
                 session.status[res[0]]["sess_time"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            # if session.status[res[0]]["user_name"] == None:
-            #     session.status[res[0]]["user_name"] = res[1]
-            # if session.status[res[0]]["user_bday"] == None:
-            #     session.status[res[0]]["user_bday"] = res[2]
-            # session.status[res[0]]["last_msg"] = None
-            # if session.status[res[0]]["sess_status"] in ["r", "r0", "r1", "r2", "r_err"]:
-            #     session.status[res[0]]["sess_status"] = None
-            # session.status[res[0]]["sess_time"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            if session.status[res[0]]["user_name"] == None:
+                session.status[res[0]]["user_name"] = res[1]
+            if session.status[res[0]]["user_bday"] == None:
+                session.status[res[0]]["user_bday"] = res[2]
+            if session.status[res[0]]["last_msg"] == None:
+                session.status[res[0]]["last_msg"] = messages[res[0]]
+            if session.status[res[0]]["sess_status"] in ["r", "r0", "r1", "r2", "r_err"]:
+                session.status[res[0]]["sess_status"] = None
+            session.status[res[0]]["sess_time"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             session.save_session()
+
         # User absent in DB
         for userid in status.keys():
             if userid not in users:
                 qry = """INSERT INTO mb_user (line_id, user_name, user_bday) VALUES (%s, %s, %s)"""
                 var = (userid, status[userid]["user_name"], status[userid]["user_bday"])
                 update(qry, var)
+        print(f"Done syncing {len(status)} user records")
+
     except:
         print("An error has occured while syncing")
 
-    print(f"Done syncing {len(status)} user records")
 
 def get_admin():
     conn = mariadb.connect(**config)
@@ -200,8 +204,10 @@ def get_admin():
 
 # Unit test for database
 if __name__ == "__main__":
-    results = get_messages("U96df1b7908bfe4d71970d05f344c7694")
+    results = get_users()
     print(results)
+    # results = get_messages("U96df1b7908bfe4d71970d05f344c7694")
+    # print(results)
 
     # qry = "SELECT * FROM mb_user"
     # try:

@@ -65,7 +65,7 @@ class Session():
         '''
         with open(self.path, 'wb') as f:
             pickle.dump(self.status, f)
-        print(self.highlight + f'Saved session to \"{self.path}\"\n' + self.highlight)
+        print(f"\n{self.highlight}Saved session to \"{self.path}\"\n{self.highlight}")
 
     def load_session(self):
         '''
@@ -74,9 +74,9 @@ class Session():
         if os.path.exists(self.path):
             with open(self.path, 'rb') as f:
                 self.status = pickle.load(f)
-            print(self.highlight + f'Retrieved session file with {len(self.status)} users\n' + self.highlight)
+            print(f"\n{self.highlight}Retrieved session file with {len(self.status)} users\n{self.highlight}")
         else:
-            print("No session file found. Using a new session.")
+            print(f"\n{self.highlight}No session file found. Using a new session.\n{self.highlight}")
             self.status = {}
 
     def add_status(self, userid):
