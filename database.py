@@ -109,6 +109,25 @@ def get_messages(userid):
     result = query(qry, (userid,))
     return result
 
+def get_last_message(userid):
+    '''
+    Get last message
+    '''
+    conn = mariadb.connect(**config)
+    qry = """
+    SELECT user_id, message
+    FROM mb_logs
+    WHERE user_id=%s
+    ORDER BY timestamp DESC
+    LIMIT 1
+    """
+    result = query(qry, (userid,))
+    # print(result)
+    if len(result) != 0:
+        return result[0]
+    else:
+        return result
+
 def check_user(name, birth, nric=None):
     '''
     Get user line_id with `user_name` and `user_bday`
@@ -137,21 +156,20 @@ def sync(session):
     messages = {}
 
     for user in users:
-        tmp = get_messages(user)
-        print(tmp)
-        break
+        tmp = get_last_message(user)
+        messages[tmp[0]] = tmp[1]
 
     # Get session dict
     status = session.status
 
-    # User absent in session
-
-    for res in result:
+    try:
+        # User absent in session
+        for res in result:
             if res[0] not in status.keys():
                 session.status[res[0]] = {}
                 session.status[res[0]]["user_name"] = res[1]
                 session.status[res[0]]["user_bday"] = res[2]
-                session.status[res[0]]["last_msg"] = None
+                session.status[res[0]]["last_msg"] = messages[res[0]]
                 session.status[res[0]]["sess_status"] = None
                 session.status[res[0]]["sess_time"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             if session.status[res[0]]["user_name"] == None:
@@ -163,14 +181,14 @@ def sync(session):
                 session.status[res[0]]["sess_status"] = None
             # session.status[res[0]]["sess_time"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             session.save_session()
-    # User absent in DB
-    for userid in status.keys():
+        # User absent in DB
+        for userid in status.keys():
             if userid not in users:
                 qry = """INSERT INTO mb_user (line_id, user_name, user_bday) VALUES (%s, %s, %s)"""
                 var = (userid, status[userid]["user_name"], status[userid]["user_bday"])
                 update(qry, var)
-
-    print("An error has occured while syncing")
+    except:
+        print("An error has occured while syncing")
 
     print(f"Done syncing {len(status)} user records")
 

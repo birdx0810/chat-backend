@@ -49,18 +49,17 @@ def registration(event, session):
 
     qry = """SELECT * FROM mb_user WHERE line_id=%s"""
     result = db.query(qry, (userid,))
-    # print(result)
 
     # Error Catcher
-    if session.status[userid]['user_name'] is None:
-        db.sync(session)
-        if session.status[userid]['user_name'] is None:
-            session.switch_status(userid, 'r0')
-        elif session.status[userid]['user_bday'] is None:
-            session.switch_status(userid, 'r1')
-        elif session.status[userid]['sess_status'] in ["r", "r0", "r1", "r2", "r_err"]:
-            session.switch_status(userid, None)
-    
+    # if session.status[userid]['user_name'] is None:
+        # db.sync(session)
+        # if session.status[userid]['user_name'] is None:
+        #     session.switch_status(userid, 'r0')
+        # elif session.status[userid]['user_bday'] is None:
+        #     session.switch_status(userid, 'r1')
+        # elif session.status[userid]['sess_status'] in ["r", "r0", "r1", "r2", "r_err"]:
+        #     session.switch_status(userid, None)
+
     # New userid detected (not in session)
     if session.status[userid]['sess_status'] == 'r':
         session.switch_status(userid, 'r0')
@@ -76,7 +75,7 @@ def registration(event, session):
     # Get user birthdate
     elif not result and session.status[userid]['sess_status'] == 'r1':
         # Try parsing string to integer
-        try: 
+        try:
             year = message[0:4]
             month = message[4:6]
             day = message[6:8]
@@ -172,13 +171,13 @@ def high_temp(event, session):
         # TODO: # API triggered, will ask if not feeling well (T/F reply)
         if message in T:
             status = 's1s1'
-            session.switch_status(userid, status)    
+            session.switch_status(userid, status)
             return status
         elif message in F:
             status = 's1f1'
             session.switch_status(userid, status)
             return status
-    
+
     elif status == 's1s1':
         # TODO: Check for symptoms in reply (doctor)
         if message == symptom[0]:
@@ -209,7 +208,7 @@ def high_temp(event, session):
             status = 's1df'
             session.switch_status(userid, status)
             return status
-    
+
     elif status in ['s1d0', 's1d1', 's1d2', 's1d3', 's1d4', 's1d5']:
         if message in T:
             status = 's1s2'

@@ -262,7 +262,7 @@ def send_msg():
 
     userid = data["user_id"]
     message = data["message"]
-    
+
     try:
         message = TextSendMessage(text=message)
         line_bot_api.push_message(userid, message)
@@ -390,7 +390,7 @@ def handle_message(event):
     usermsg = event.message.text
     time = datetime.datetime.now()
     time = time.strftime("%Y-%m-%d %H:%M:%S")
-    print(time)
+    print("\n"+time)
 
     # TODO: check timeout
     stat = session.get_status(userid)
@@ -479,7 +479,6 @@ def handle_message(event):
 if __name__ == "__main__":
     # Load session
     session.load_session()
-    db.sync(session)
 
     client_status = {}
 
@@ -488,8 +487,8 @@ if __name__ == "__main__":
 
     # Setup host port
     port = int(os.environ.get('PORT', 8080))
-    # app.run(host='0.0.0.0', port=port, debug=True)
     socketio.run(app, host='0.0.0.0', port=port, debug=True)
+
     # Call function at apointed time
     # while True:
     #     time.sleep(3600*30)
