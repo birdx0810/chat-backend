@@ -134,6 +134,12 @@ def sync(session):
         print(e)
 
     users = [r[0] for r in result]
+    messages = {}
+
+    for user in users:
+        tmp = get_messages(user)
+        print(tmp)
+        break
 
     # Get session dict
     status = session.status
