@@ -122,7 +122,11 @@ def get_last_message(userid):
     LIMIT 1
     """
     result = query(qry, (userid,))
-    return result[0]
+    # print(result)
+    if len(result) != 0:
+        return result[0]
+    else:
+        return result
 
 def check_user(name, birth, nric=None):
     '''

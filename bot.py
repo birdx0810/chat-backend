@@ -476,7 +476,6 @@ def handle_message(event):
 if __name__ == "__main__":
     # Load session
     session.load_session()
-    db.sync(session)
 
     client_status = {}
 
@@ -485,8 +484,8 @@ if __name__ == "__main__":
 
     # Setup host port
     port = int(os.environ.get('PORT', 8080))
-    # app.run(host='0.0.0.0', port=port, debug=True)
     socketio.run(app, host='0.0.0.0', port=port, debug=True)
+
     # Call function at apointed time
     # while True:
     #     time.sleep(3600*30)
