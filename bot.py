@@ -128,12 +128,12 @@ def get_user():
         }]
     '''
     #TODO: Verify request from frontend (Call function)
-    #try:
-    data = request.get_json(force=True)
-    token = data["auth_token"]
-    assert(auth_valid(token))
-    #except:
-        #return abort(403, 'Forbidden: Authentication is bad')
+    try:
+        data = request.get_json(force=True)
+        token = data["auth_token"]
+        assert(auth_valid(token))
+    except:
+        return abort(403, 'Forbidden: Authentication is bad')
 
     users = db.get_users()
     temp = []
@@ -225,7 +225,7 @@ def get_old_msgs():
                 "direction": message[3],
                 "timestamp": message[4].strftime("%Y-%m-%d %H:%M:%S"),
             })
-    print(temp)
+
     response = flask.Response(str(temp))
     response.headers['Access-Control-Allow-Origin'] = '*'
     return response

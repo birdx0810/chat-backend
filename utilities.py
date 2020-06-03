@@ -5,6 +5,7 @@ import pickle
 import os
 import signal
 import sys
+import database as db
 
 class Log():
     def __init__(self):
@@ -56,6 +57,7 @@ class Session():
         Saves the session state when process is killed
         '''
         print(f'\nPressed Ctrl+C')
+        db.sync(self.status)
         self.save_session()
         sys.exit(0)
 
