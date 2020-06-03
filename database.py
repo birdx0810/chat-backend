@@ -172,13 +172,13 @@ def sync(session):
                 session.status[res[0]]["last_msg"] = messages[res[0]]
                 session.status[res[0]]["sess_status"] = None
                 session.status[res[0]]["sess_time"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            if session.status[res[0]]["user_name"] == None:
-                session.status[res[0]]["user_name"] = res[1]
-            if session.status[res[0]]["user_bday"] == None:
-                session.status[res[0]]["user_bday"] = res[2]
+            # if session.status[res[0]]["user_name"] == None:
+            #     session.status[res[0]]["user_name"] = res[1]
+            # if session.status[res[0]]["user_bday"] == None:
+            #     session.status[res[0]]["user_bday"] = res[2]
             # session.status[res[0]]["last_msg"] = None
-            if session.status[res[0]]["sess_status"] in ["r", "r0", "r1", "r2", "r_err"]:
-                session.status[res[0]]["sess_status"] = None
+            # if session.status[res[0]]["sess_status"] in ["r", "r0", "r1", "r2", "r_err"]:
+            #     session.status[res[0]]["sess_status"] = None
             # session.status[res[0]]["sess_time"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             session.save_session()
         # User absent in DB

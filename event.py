@@ -60,48 +60,55 @@ def registration(event, session):
         # elif session.status[userid]['sess_status'] in ["r", "r0", "r1", "r2", "r_err"]:
         #     session.switch_status(userid, None)
 
-    # New userid detected (not in session)
-    if session.status[userid]['sess_status'] == 'r':
-        session.switch_status(userid, 'r0')
-        return 'r0'
-    # Get user Chinese name
-    elif not result and session.status[userid]['sess_status'] == 'r0':
-        if 2 <= len(message) <= 4 and re.match(r'[\u4e00-\u9fff]{2,4}', message):
-            session.status[userid]["user_name"] = message
-            session.switch_status(userid, 'r1')
-            return 'r1'
-        else:
-            return "r_err"
-    # Get user birthdate
-    elif not result and session.status[userid]['sess_status'] == 'r1':
-        # Try parsing string to integer
-        try:
-            year = message[0:4]
-            month = message[4:6]
-            day = message[6:8]
-            current = datetime.now()
-            birthdate = datetime(year=int(year),month=int(month),day=int(day))
-        except:
-            return "r_err"
-        # Check if string is legal birth date
-        if len(message) == 8 and birthdate < current:
-            session.status[userid]["user_bday"] = birthdate
-            session.switch_status(userid, 'r2')
-            # TODO: Add user to DB
-            name = session.status[userid]['user_name']
+    # If user not in database
+    if result is None:
+        # New userid detected (not in session)
+        if session.status[userid]['sess_status'] == 'r':
+            session.switch_status(userid, 'r0')
+            return 'r0'
+        # Get user Chinese name
+        elif session.status[userid]['sess_status'] == 'r0':
+            if 2 <= len(message) <= 4 and re.match(r'[\u4e00-\u9fff]{2,4}', message):
+                session.status[userid]["user_name"] = message
+                session.switch_status(userid, 'r1')
+                return 'r1'
+            else:
+                return "r_err"
+        # Get user birthdate
+        elif session.status[userid]['sess_status'] == 'r1':
+            # Try parsing string to integer
             try:
-                conn = db.connect()
-                qry = """INSERT INTO mb_user (line_id, user_name, user_bday) VALUES (%s, %s, %s)"""
-                db.update(qry, (userid, name, birthdate))
-            except mariadb.Error as e:
-                print('DB Error')
-            return 'r2'
-        else:
-            return "r_err"
-    #TODO: Add conditions in case of errors
-    elif not result and userid not in session.status:
-        session.add_status(userid)
-        return 'r0'
+                year = message[0:4]
+                month = message[4:6]
+                day = message[6:8]
+                current = datetime.now()
+                birthdate = datetime(year=int(year),month=int(month),day=int(day))
+            except:
+                return "r_err"
+            # Check if string is legal birth date
+            if len(message) == 8 and birthdate < current:
+                session.status[userid]["user_bday"] = birthdate
+                session.switch_status(userid, 'r2')
+                # TODO: Add user to DB
+                name = session.status[userid]['user_name']
+                try:
+                    conn = db.connect()
+                    qry = """INSERT INTO mb_user (line_id, user_name, user_bday) VALUES (%s, %s, %s)"""
+                    db.update(qry, (userid, name, birthdate))
+                except mariadb.Error as e:
+                    print('DB Error')
+                return 'r2'
+            else:
+                return "r_err"
+    # TODO: Add conditions in case of errors
+    else:
+        print(f"User already in database")
+        db.sync(session)
+
+    
+    # if not result and userid not in session.status:
+    #     session.add_status(userid)
+    #     return 'r0'
 
 ##############################
 # QA Flow
