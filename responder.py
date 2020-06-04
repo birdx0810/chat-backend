@@ -88,30 +88,34 @@ def registration_resp(event, status, session):
 
     if status == 'r0':
         msg = "初次見面，請輸入您的姓名"
-        line_bot_api.reply_message(
-            event.reply_token,
-            TextSendMessage(text=msg)
-        )
+        # line_bot_api.reply_message(
+        #     event.reply_token,
+        #     TextSendMessage(text=msg)
+        # )
+        send(userid=userid, message=msg, session=session, socketio=socketio, event=event)
     elif status == 'r1':
         msg = "請輸入您的生日（年年年年月月日日）"
-        line_bot_api.reply_message(
-            event.reply_token,
-            TextSendMessage(text=msg)
-        )
+        # line_bot_api.reply_message(
+        #     event.reply_token,
+        #     TextSendMessage(text=msg)
+        # )
+        send(userid=userid, message=msg, session=session, socketio=socketio, event=event)
     elif status == 'r2':
         msg = "註冊成功啦"
-        line_bot_api.reply_message(
-            event.reply_token,
-            TextSendMessage(text=msg)
-        )
+        # line_bot_api.reply_message(
+        #     event.reply_token,
+        #     TextSendMessage(text=msg)
+        # )
+        send(userid=userid, message=msg, session=session, socketio=socketio, event=event)
         session.status[userid]['sess_status'] = session.init_state
     elif status == 'r_err':
         status = session.status[userid]['sess_status']
         msg = "不好意思，您的輸入有所異常。\n" + err_msg[status]
-        line_bot_api.reply_message(
-            event.reply_token,
-            TextSendMessage(text=msg)
-        )
+        # line_bot_api.reply_message(
+        #     event.reply_token,
+        #     TextSendMessage(text=msg)
+        # )
+        send(userid=userid, message=msg, session=session, socketio=socketio, event=event)
 
 def qa_resp(event, session, socketio):
     '''
