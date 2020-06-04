@@ -21,8 +21,11 @@ from linebot.models import (
 
 from sklearn.metrics.pairwise import cosine_similarity
 
+import datetime
 import pickle
 import utilities
+
+import database as db
 import templates as t
 
 ##############################
@@ -55,6 +58,18 @@ def send(userid, message, session, event=None):
             event.reply_token,
             TextSendMessage(text=message)
         )
+
+    json = {
+        "user_name": session.status[userid]["user_name"],
+        "user_id": userid,
+        "content": message,
+        "direction": 1,
+    }
+
+    print("SOCKET: Sending to Front-End")
+    socketio.emit('Message', json, json=True, broadcast=True)
+    print("SOCKET: Emitted to Front-End")
+    
     db.log(userid, usermsg, direction=1)    # Save user message to DB (messages to user == 1)
     session.status[userid]["last_msg"] = message
     session.status[userid]["sess_time"] = time
