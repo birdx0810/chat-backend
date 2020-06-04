@@ -402,6 +402,13 @@ def handle_message(event):
     print(f'Message: {usermsg}')
     print(f'Status: {stat}\n')
 
+    json = {
+        "user_name": session.status[userid]["user_name"],
+        "user_id": userid,
+        "content": usermsg,
+        "direction": 0,
+    }
+
     db.log(userid, usermsg, direction=0)
     socketio.emit('Message', json, json=True, broadcast=True, callback=ack)
 
@@ -435,13 +442,6 @@ def handle_message(event):
     elif stat in ["qa0", "qa1", "qa2_t", "qa2_f", "qa3"]:
         stat = e.qa(event, session)
         responder.qa_resp(event, session, socketio)
-
-    json = {
-        "user_name": session.status[userid]["user_name"],
-        "user_id": userid,
-        "content": usermsg,
-        "direction": 0,
-    }
 
     print("SOCKET: Sending to Front-End")
     # socketio.emit('Message', json, json=True, broadcast=True, callback=ack)
