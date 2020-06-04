@@ -57,7 +57,7 @@ class Session():
         Saves the session state when process is killed
         '''
         print(f'\nPressed Ctrl+C')
-        db.sync(self.status)
+        db.sync(self)
         self.save_session()
         sys.exit(0)
 
