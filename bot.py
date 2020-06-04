@@ -351,6 +351,7 @@ def message_callback(userid):
 
     if len(filtered) >= max_amount:
         for count in range(max_amount):
+            print(filtered[count][2])
             temp.append({
                 "msg_id": filtered[count][0],
                 "user_name":  session.status[filtered[count][1]]["user_name"],
@@ -360,6 +361,7 @@ def message_callback(userid):
             })
     else:
         for message in filtered:
+            print(message[2])
             temp.append({
                 "msg_id": message[0],
                 "user_name":  session.status[message[1]]["user_name"],
@@ -400,15 +402,18 @@ def handle_message(event):
     print(f'Message: {usermsg}')
     print(f'Status: {stat}\n')
 
+    db.log(userid, usermsg, direction=0)
+    socketio.emit('Message', json, json=True, broadcast=True, callback=ack)
+
     # User in registration
     if stat in ["r", "r0", "r1", "r2", "r_err"]:
         stat = e.registration(event, session)
         responder.registration_resp(event, stat, session)
         # Log registration
-        db.log(userid, usermsg, direction=0)
-        session.status[userid]["last_msg"] = usermsg
-        session.status[userid]["sess_time"] = time
-        return
+        # db.log(userid, usermsg, direction=0)
+        # session.status[userid]["last_msg"] = usermsg
+        # session.status[userid]["sess_time"] = time
+        # return
 
     # User in scenario 1
     elif stat in ["s1s0", "s1s1", "s1d0", "s1d1", "s1d2", "s1d3", "s1d4", "s1d5", "s1d6", "s1s2", "s1s3", "s1s4"]:
@@ -425,11 +430,11 @@ def handle_message(event):
     elif usermsg == '/qa':
         stat = 'qa0'
         session.switch_status(userid, stat)
-        responder.qa_resp(event, session)
+        responder.qa_resp(event, session, socketio)
 
     elif stat in ["qa0", "qa1", "qa2_t", "qa2_f", "qa3"]:
         stat = e.qa(event, session)
-        responder.qa_resp(event, session)
+        responder.qa_resp(event, session, socketio)
 
     json = {
         "user_name": session.status[userid]["user_name"],
@@ -439,10 +444,9 @@ def handle_message(event):
     }
 
     print("SOCKET: Sending to Front-End")
-    socketio.emit('Message', json, json=True, broadcast=True, callback=ack)
+    # socketio.emit('Message', json, json=True, broadcast=True, callback=ack)
     print("SOCKET: Emitted to Front-End")
 
-    db.log(userid, usermsg, direction=0)
     session.status[userid]["last_msg"] = usermsg
     session.status[userid]["sess_time"] = time
 

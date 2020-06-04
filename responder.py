@@ -44,7 +44,7 @@ else: # Is production
     # Channel Secret
     handler = WebhookHandler('5e438935670953f040569105b3d527e1')
 
-def send(userid, message, session, event=None):
+def send(userid, message, session, socketio, event=None):
     '''
     This function wraps the utilties for logging and sending messages
     '''
@@ -69,8 +69,8 @@ def send(userid, message, session, event=None):
     print("SOCKET: Sending to Front-End")
     socketio.emit('Message', json, json=True, broadcast=True)
     print("SOCKET: Emitted to Front-End")
-    
-    db.log(userid, usermsg, direction=1)    # Save user message to DB (messages to user == 1)
+
+    db.log(userid, message, direction=1)    # Save user message to DB (messages to user == 1)
     session.status[userid]["last_msg"] = message
     session.status[userid]["sess_time"] = time
 
@@ -113,7 +113,7 @@ def registration_resp(event, status, session):
             TextSendMessage(text=msg)
         )
 
-def qa_resp(event, session):
+def qa_resp(event, session, socketio):
     '''
     Reply user according to status
     '''
@@ -131,7 +131,7 @@ def qa_resp(event, session):
         #     event.reply_token,
         #     TextSendMessage(text=msg)
         # )
-        send(userid=userid, message=msg, session=session, event=event)
+        send(userid=userid, message=msg, session=session, socketio=socketio, event=event)
 
     elif status == 'qa1':
         found = False
@@ -140,7 +140,7 @@ def qa_resp(event, session):
             for keyword in keys:
                 if keyword in text.lower():
                     found = True
-                    msg = f"你想問的問題可能是:\n{repr(values[0])}\n\n我們的回答是:{repr(values[1])}"
+                    msg = f"你想問的問題可能是:\n`{values[0]}`\n\n我們的回答是:`{values[1]}`"
         # Calculate cosine similarity if no keywords found in sentence
         if found == False:
             query = bc.encode([text])
@@ -150,14 +150,14 @@ def qa_resp(event, session):
                 sim = cosine_similarity(query, t.question_embeddings[idx].resize((768,1)))
                 similarity.append(sim)
             max_idx, _ = max((i,v)for i,v in enumerate(similarity))
-            msg = f"你想問的問題可能是:\n{repr(values[0])}\n\n我們的回答是:\n{repr(values[1])}"
+            msg = f"你想問的問題可能是:\n`{values[0]}`\n\n我們的回答是:\n`{values[1]}`"
         # Reply answer
         is_correct = t.yn_template('請問是否是你想要問的問題嗎？')
         # line_bot_api.reply_message(
         #     event.reply_token,
         #     TextSendMessage(text=msg)
         # )
-        send(userid=userid, message=msg, session=session, event=event)
+        send(userid=userid, message=msg, session=session, socketio=socketio, event=event)
         line_bot_api.push_message(userid, is_correct)
 
     elif status == 'qa1_err':
@@ -166,7 +166,7 @@ def qa_resp(event, session):
         #     event.reply_token,
         #     TextSendMessage(text=msg)
         # )
-        send(userid=userid, message=msg, session=session, event=event)
+        send(userid=userid, message=msg, session=session, socketio=socketio, event=event)
         pass
 
     elif status == 'qa2_t':
@@ -175,16 +175,16 @@ def qa_resp(event, session):
         #     event.reply_token,
         #     TextSendMessage(text=msg)
         # )
-        send(userid=userid, message=msg, session=session, event=event)
+        send(userid=userid, message=msg, session=session, socketio=socketio, event=event)
         session.switch_status(userid, None)
 
     elif status == 'qa2_f':
         qa_labels = t.qa_labels()
-        # line_bot_api.reply_message(
-        #     event.reply_token,
-        #     qa_labels
-        # )
-        send(userid=userid, message=qa_labels, session=session, event=event)
+        line_bot_api.reply_message(
+            event.reply_token,
+            qa_labels
+        )
+        # send(userid=userid, message=qa_labels, session=session, socketio=socketio, event=event)
 
     elif status == 'qa3':
         for keys, values in t.qa_dict.items():
@@ -197,7 +197,7 @@ def qa_resp(event, session):
         #     event.reply_token,
         #     TextSendMessage(text=msg)
         # )
-        send(userid=userid, message=msg, session=session, event=event)
+        send(userid=userid, message=msg, session=session, socketio=socketio, event=event)
         session.switch_status(userid, None)
 
 def high_temp_resp(userid, session, event=None):
