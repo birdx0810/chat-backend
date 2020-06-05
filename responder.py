@@ -109,17 +109,17 @@ def registration_resp(event, status, session, socketio):
             TextSendMessage(text=msg)
         )
         db.log(userid, msg, direction=1)
-        # send(userid=userid, message=msg, session=session, socketio=socketio, event=event)
+        send(userid=userid, message=msg, session=session, socketio=socketio, event=event)
         session.status[userid]['sess_status'] = session.init_state
     elif status == 'r_err':
         status = session.status[userid]['sess_status']
         msg = "不好意思，您的輸入有所異常。\n" + err_msg[status]
-        # line_bot_api.reply_message(
-        #     event.reply_token,
-        #     TextSendMessage(text=msg)
-        # )
-        # db.log(userid, msg, direction=1)
-        send(userid=userid, message=msg, session=session, socketio=socketio, event=event)
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text=msg)
+        )
+        db.log(userid, msg, direction=1)
+        # send(userid=userid, message=msg, session=session, socketio=socketio, event=event)
 
 def qa_resp(event, session, socketio):
     '''

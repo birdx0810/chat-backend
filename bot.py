@@ -200,7 +200,6 @@ def get_old_msgs():
     # Filter messages that are > timestamp
     for message in messages:
         message = list(message)
-        print(message[4])
         message[4] = datetime.datetime.fromtimestamp(float(message[4]))
         if message[4] < offset:
             filtered.append(message)
@@ -227,13 +226,9 @@ def get_old_msgs():
                 "timestamp": message[4].timestamp(),
             })
 
-    print(temp)
     response = flask.Response(str(temp))
     response.headers['Access-Control-Allow-Origin'] = '*'
     return response
-
-def ack():
-    print('SOCKET: ACK')
 
 @socketio.on('connect')
 def handle_connection():
@@ -243,7 +238,7 @@ def handle_connection():
     except:
         return abort(403, 'Forbidden: Authentication is bad')
     print('SOCKET: Connected')
-    socketio.emit('Response', {"data": "OK"}, broadcast=True, callback=ack)
+    socketio.emit('Response', {"data": "OK"}, broadcast=True)
     print('SOCKET: Emitted')
 
 @socketio.on_error() # handles the '/chat' namespace
@@ -281,7 +276,7 @@ def send_msg():
     db.log(userid, message, direction=1)
 
     print("SOCKET: Sending to Front-End")
-    socketio.emit('Message', json, json=True, broadcast=True, callback=ack)
+    socketio.emit('Message', json, json=True, broadcast=True)
     print("SOCKET: Emitted to Front-End")
 
     response = flask.Response("OK")
@@ -414,7 +409,7 @@ def handle_message(event):
     db.log(userid, usermsg, direction=0)
 
     if stat not in ["r", "r0", "r1", "r2", "r_err"]:
-        socketio.emit('Message', json, json=True, broadcast=True, callback=ack)
+        socketio.emit('Message', json, json=True, broadcast=True)
 
     # User in registration
     if stat in ["r", "r0", "r1", "r2", "r_err"]:
@@ -448,7 +443,7 @@ def handle_message(event):
         responder.qa_resp(event, session, socketio)
 
     print("SOCKET: Sending to Front-End")
-    # socketio.emit('Message', json, json=True, broadcast=True, callback=ack)
+    # socketio.emit('Message', json, json=True, broadcast=True)
     print("SOCKET: Emitted to Front-End")
 
     session.status[userid]["last_msg"] = usermsg
