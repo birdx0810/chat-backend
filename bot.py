@@ -410,12 +410,14 @@ def handle_message(event):
     }
 
     db.log(userid, usermsg, direction=0)
-    socketio.emit('Message', json, json=True, broadcast=True, callback=ack)
+
+    if stat not in ["r", "r0", "r1", "r2", "r_err"]:
+        socketio.emit('Message', json, json=True, broadcast=True, callback=ack)
 
     # User in registration
     if stat in ["r", "r0", "r1", "r2", "r_err"]:
         stat = e.registration(event, session)
-        responder.registration_resp(event, stat, session)
+        responder.registration_resp(event, stat, session, socketio)
         # Log registration
         # db.log(userid, usermsg, direction=0)
         # session.status[userid]["last_msg"] = usermsg

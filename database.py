@@ -84,6 +84,7 @@ def log(userid, message, direction):
     qry = "INSERT INTO mb_logs (user_id, message, direction, timestamp) VALUES (%s, %s, %s, %s)"
     time = datetime.datetime.now().timestamp()
     # time = time.strftime("%Y-%m-%d %H:%M:%S")
+    print(time)
     update(qry, (userid, message, direction, time))
     if direction == 0:
         direction = "FROM"
