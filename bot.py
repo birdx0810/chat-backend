@@ -215,7 +215,7 @@ def get_old_msgs():
                 "user_name":  session.status[filtered[count][1]]["user_name"],
                 "content": filtered[count][2],
                 "direction": filtered[count][3],
-                "timestamp": filtered[count][4]# .strftime("%Y-%m-%d %H:%M:%S"),
+                "timestamp": filtered[count][4].timestamp(),
             })
     else:
         for message in filtered:
@@ -224,7 +224,7 @@ def get_old_msgs():
                 "user_name":  session.status[message[1]]["user_name"],
                 "content": message[2],
                 "direction": message[3],
-                "timestamp": message[4]# .strftime("%Y-%m-%d %H:%M:%S"),
+                "timestamp": message[4].timestamp(),
             })
 
     print(temp)
