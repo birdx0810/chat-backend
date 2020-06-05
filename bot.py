@@ -193,14 +193,14 @@ def get_old_msgs():
 
     # Get offset time (-1 == now)
     if offset == -1:
-        offset = datetime.datetime.now()
+        offset = datetime.datetime.now().timestamp()
     elif type(offset) is str:
         offset = datetime.datetime.strptime(offset, "%Y-%m-%d %H:%M:%S")
 
     # Filter messages that are > timestamp
     for message in messages:
         message = list(message)
-        message[4] = datetime.datetime.strptime(message[4], "%Y-%m-%d %H:%M:%S")
+        # message[4] = datetime.datetime.strptime(message[4], "%Y-%m-%d %H:%M:%S")
         if message[4] < offset:
             filtered.append(message)
 
@@ -214,7 +214,7 @@ def get_old_msgs():
                 "user_name":  session.status[filtered[count][1]]["user_name"],
                 "content": filtered[count][2],
                 "direction": filtered[count][3],
-                "timestamp": filtered[count][4].strftime("%Y-%m-%d %H:%M:%S"),
+                "timestamp": filtered[count][4]# .strftime("%Y-%m-%d %H:%M:%S"),
             })
     else:
         for message in filtered:
@@ -223,7 +223,7 @@ def get_old_msgs():
                 "user_name":  session.status[message[1]]["user_name"],
                 "content": message[2],
                 "direction": message[3],
-                "timestamp": message[4].strftime("%Y-%m-%d %H:%M:%S"),
+                "timestamp": message[4]# .strftime("%Y-%m-%d %H:%M:%S"),
             })
 
     response = flask.Response(str(temp))
@@ -338,12 +338,12 @@ def message_callback(userid):
     if offset == -1:
         offset = datetime.datetime.now()
     elif type(offset) is str:
-        offset = datetime.datetime.strptime(offset, "%Y-%m-%d %H:%M:%S")
+        offset = datetime.datetime# .strptime(offset, "%Y-%m-%d %H:%M:%S")
 
     # Filter messages that are > timestamp
     for message in messages:
         message = list(message)
-        message[4] = datetime.datetime.strptime(message[4], "%Y-%m-%d %H:%M:%S")
+        message[4] = datetime.datetime# .strptime(message[4], "%Y-%m-%d %H:%M:%S")
         if message[4] < offset:
             filtered.append(message)
 
@@ -357,7 +357,7 @@ def message_callback(userid):
                 "user_name":  session.status[filtered[count][1]]["user_name"],
                 "content": filtered[count][2],
                 "direction": filtered[count][3],
-                "timestamp": filtered[count][4].strftime("%Y-%m-%d %H:%M:%S"),
+                "timestamp": filtered[count][4]# .strftime("%Y-%m-%d %H:%M:%S"),
             })
     else:
         for message in filtered:
@@ -367,7 +367,7 @@ def message_callback(userid):
                 "user_name":  session.status[message[1]]["user_name"],
                 "content": message[2],
                 "direction": message[3],
-                "timestamp": message[4].strftime("%Y-%m-%d %H:%M:%S"),
+                "timestamp": message[4]# .strftime("%Y-%m-%d %H:%M:%S"),
             })
 
     response = flask.Response(str(temp))
@@ -391,8 +391,8 @@ def handle_message(event):
     userid = event.source.user_id
     usermsg = event.message.text
     time = datetime.datetime.now()
-    time = time.strftime("%Y-%m-%d %H:%M:%S")
-    print("\n"+time)
+    # time = time.strftime("%Y-%m-%d %H:%M:%S")
+    # print("\n"+time)
 
     # TODO: check timeout
     stat = session.get_status(userid)
