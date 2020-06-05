@@ -450,7 +450,7 @@ def handle_message(event):
     print("SOCKET: Emitted to Front-End")
 
     session.status[userid]["last_msg"] = usermsg
-    session.status[userid]["sess_time"] = time
+    session.status[userid]["sess_time"] = time.timestamp()
 
     '''
     (DEPRECATED) User in chat state (currently unable to communicate)
