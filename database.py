@@ -83,7 +83,7 @@ def log(userid, message, direction):
     '''
     qry = "INSERT INTO mb_logs (user_id, message, direction, timestamp) VALUES (%s, %s, %s, %s)"
     time = datetime.datetime.now()
-    time = time.strftime("%Y-%m-%d %H:%M:%S")
+    # time = time.strftime("%Y-%m-%d %H:%M:%S")
     update(qry, (userid, message, direction, time))
     if direction == 0:
         direction = "FROM"
@@ -172,7 +172,7 @@ def sync(session):
                 session.status[res[0]]["user_bday"] = res[2]
                 session.status[res[0]]["last_msg"] = messages[res[0]]
                 session.status[res[0]]["sess_status"] = None
-                session.status[res[0]]["sess_time"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                session.status[res[0]]["sess_time"] = datetime.datetime.now()# .strftime("%Y-%m-%d %H:%M:%S")
             if session.status[res[0]]["user_name"] == None:
                 session.status[res[0]]["user_name"] = res[1]
             if session.status[res[0]]["user_bday"] == None:

@@ -90,7 +90,7 @@ class Session():
         self.status[userid]["user_bday"] = None
         self.status[userid]["last_msg"] = None
         self.status[userid]["sess_status"] = 'r'
-        self.status[userid]["sess_time"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        self.status[userid]["sess_time"] = datetime.now()# .strftime("%Y-%m-%d %H:%M:%S")
         print(f'New user: {userid}')
 
     def get_status(self, userid):
@@ -112,7 +112,7 @@ class Session():
         Switch user status and log time
         '''
         self.status[userid]["sess_status"] = status
-        self.status[userid]["sess_time"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        self.status[userid]["sess_time"] = datetime.now()# .strftime("%Y-%m-%d %H:%M:%S")
         print(f'User {userid} status update `{status}` @ {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}')
 
     def get_users(self):
