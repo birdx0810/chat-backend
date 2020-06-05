@@ -227,6 +227,7 @@ def get_old_msgs():
                 "timestamp": message[4]# .strftime("%Y-%m-%d %H:%M:%S"),
             })
 
+    print(temp)
     response = flask.Response(str(temp))
     response.headers['Access-Control-Allow-Origin'] = '*'
     return response
