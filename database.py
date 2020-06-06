@@ -18,7 +18,7 @@ import datetime, re
 config = {
     'host': '127.0.0.1',
     'user': 'mb-admin',
-    'password': '04bu2xeK',
+    'password': 'c19W27yrb',
     'database': 'medbot_db',
 }
 
