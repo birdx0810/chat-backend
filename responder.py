@@ -252,7 +252,7 @@ def high_temp_resp(userid, session, socketio, event=None):
     elif status == 's1d0' or status == 's1d1':
         # If '皮膚出疹' & '眼窩痛' detected
         msg = t.symptom_reply[status]
-        ask_clinic = t.yn_template("為了您的安全健康，建議盡快至醫療院所就醫。\n是否需要提供您附近醫療院所的資訊？")
+        ask_clinic = t.want_template("為了您的安全健康，建議盡快至醫療院所就醫。\n是否需要提供您附近醫療院所的資訊？")
 
         send(userid=userid, message=msg, session=session, socketio=socketio, event=event)
         line_bot_api.push_message(userid, TextSendMessage(t.dengue_info()))
@@ -264,7 +264,7 @@ def high_temp_resp(userid, session, socketio, event=None):
     elif status == 's1d2' or status == 's1d3' or status == 's1d4':
         # If '喉嚨痛' & '咳嗽' & '咳血痰' detected
         msg = t.symptom_reply[status]
-        ask_clinic = t.yn_template("為了您的安全健康，建議盡快至醫療院所就醫。\n是否需要提供您附近醫療院所的資訊？")
+        ask_clinic = t.want_template("為了您的安全健康，建議盡快至醫療院所就醫。\n是否需要提供您附近醫療院所的資訊？")
 
         send(userid=userid, message=msg, session=session, socketio=socketio, event=event)
         line_bot_api.push_message(userid, TextSendMessage(t.flu_info()))
@@ -277,7 +277,7 @@ def high_temp_resp(userid, session, socketio, event=None):
     elif status == 's1d5':
         # If '肌肉酸痛' detected
         msg = t.symptom_reply[status]
-        ask_clinic = t.yn_template("為了您的安全健康，建議盡快至醫療院所就醫。\n是否需要提供您附近醫療院所的資訊？")
+        ask_clinic = t.want_template("為了您的安全健康，建議盡快至醫療院所就醫。\n是否需要提供您附近醫療院所的資訊？")
 
         send(userid=userid, message=msg, session=session, socketio=socketio, event=event)
 
@@ -286,7 +286,6 @@ def high_temp_resp(userid, session, socketio, event=None):
         send(userid=userid, message=info, session=session, socketio=socketio, event=False)
 
         line_bot_api.push_message(userid, ask_clinic)
-        print(ask_clinic.alt_text)
         send(userid=userid, message=ask_clinic.alt_text, session=session, socketio=socketio, event=False)
 
     elif status == 's1df':
