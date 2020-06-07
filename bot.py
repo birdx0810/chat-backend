@@ -207,7 +207,7 @@ def get_old_msgs():
     for message in messages:
         message = list(message)
         # message[4] = datetime.datetime.fromtimestamp(float(message[4]))
-        if message[4] < offset:
+        if float(message[4]) < offset:
             filtered.append(message)
 
     temp = []
