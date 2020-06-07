@@ -5,6 +5,7 @@ Templates for replying messages, reduce the dirtiness of the responder
 from linebot.models import *
 
 import pickle
+import urllib
 import google_map as gmaps
 
 ##############################
