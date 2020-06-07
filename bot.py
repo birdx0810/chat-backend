@@ -229,7 +229,7 @@ def get_old_msgs():
                 "user_name":  session.status[message[1]]["user_name"],
                 "content": message[2],
                 "direction": message[3],
-                "timestamp": message[4].timestamp(),
+                "timestamp": message[4],
             })
 
     response = flask.Response(str(temp))
@@ -288,6 +288,14 @@ def send_msg():
     response = flask.Response("OK")
     response.headers['Access-Control-Allow-Origin'] = '*'
     return response
+
+# TODO
+@app.route("/broadcast", methods=['POST'])
+def broadcast_msg():
+    users = db.get_users()
+    for user in users:
+        # send_msg()
+        pass
 
 @app.route("/login", methods=['POST'])
 def log_in():
