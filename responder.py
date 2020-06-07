@@ -239,7 +239,7 @@ def high_temp_resp(userid, session, event=None):
             symptom_template
         )
         print(symptom_template.alt_text)
-        send(userid=userid, message=symptom_template.alt_text, session=session, socketio=socketio, event=False
+        send(userid=userid, message=symptom_template.alt_text, session=session, socketio=socketio, event=False)
     elif status == 's1f1':
         # If false (feeling ok), reply msg
         msg = "請持續密切留意您的您的體溫變化，多休息多喝水，至公共場合時記得戴口罩，至公共場合時記得戴口罩,若有任何身體不適仍建議您至醫療院所就醫。"
