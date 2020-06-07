@@ -86,23 +86,29 @@ def high_temp():
         return abort(400, 'Bad Request: Please use `json` format')
     elif request.method != 'POST':
         return abort(403, 'Forbidden: Please use `POST` request')
-    else:
+    try:
         data = request.json
         userid = db.check_user(data['name'], data['birth'])
-        if userid is []:
-            return abort(400, 'Bad Request: User not found')
+        assert(userid != [])
+
+    except AssertionError:
+        print("User not found")
+        return abort(400, 'Bad Request: User not found')
 
         # (condition.condition_diagnosis)
         # dialogue_code, message = res.condition_diagnosis.greeting()
         # sess.session_update_dialogue(userid,dialogue_code)
         # line_bot_api.push_message(userid, message)
 
-        print(f'User: {userid}')
-        userid = userid[0][0]
-        stat = 's1s0'
-        session.switch_status(userid, stat)
-        responder.high_temp_resp(userid, session)
-        return "OK"
+    if len(userid) > 1:
+        print("Multiple users detected")
+        return abort(418, "There are more than one tea drinkers")
+
+    userid = userid[0][0]
+    stat = 's1s0'
+    session.switch_status(userid, stat)
+    responder.high_temp_resp(userid, session)
+    return "OK"
 
 @app.route("/event_push_news")
 def push_news():
