@@ -53,6 +53,26 @@ def yn_template(msg):
     )
     return tf_template
 
+def want_template(msg):
+    tf_template = TemplateSendMessage(
+        alt_text=msg,
+        template=ButtonsTemplate(
+            title=msg,
+            text=" ",
+            actions=[
+                MessageTemplateAction(
+                    label='要',
+                    text='要'
+                ),
+                MessageTemplateAction(
+                    label='不要',
+                    text='不要'
+                )
+            ]
+        )
+    )
+    return tf_template
+
 ##############################
 # Task specific templates
 ##############################
