@@ -40,7 +40,7 @@ def searchHospital(lat, lng, kw, GOOGLE_API_KEY ,searchtype):
     clinicReq = requests.get(clinicSearch)
     nearbyclinicReq_dict = clinicReq.json()
     top5clinicReq = nearbyclinicReq_dict["results"]
-    res_num = (len(top5clinicReq)) 
+    res_num = (len(top5clinicReq))
     # 取評分高於3.9的医院
     bravo=[]
     for i in range(res_num):
@@ -51,12 +51,12 @@ def searchHospital(lat, lng, kw, GOOGLE_API_KEY ,searchtype):
             KeyError
     if len(bravo) < 0:
         print("No clinic or hospital nearby. ")
-    
+
     allhospital = []
     for clinicCode in bravo:
         allhospital.append(content(top5clinicReq[clinicCode]))
     return allhospital
-    
+
 
 def get_hospitals(lat, lng, keyword, GOOGLE_API_KEY='AIzaSyBfl9pJ1nJJuoidn_WMIGxfUVtN9x2GHCE', searchtype = ''):
     # 经纬度，keyword，apikey，搜索类型例如hospital
@@ -66,5 +66,5 @@ def get_hospitals(lat, lng, keyword, GOOGLE_API_KEY='AIzaSyBfl9pJ1nJJuoidn_WMIGx
 def get_address(address, keyword, GOOGLE_API_KEY='AIzaSyBfl9pJ1nJJuoidn_WMIGxfUVtN9x2GHCE', searchtype = ''):
     # 经纬度，keyword，apikey，搜索类型例如hospital
     lat, log = transformAddress(address, GOOGLE_API_KEY)
-    allhospitals = searchHospital(lat, log, Keyword, GOOGLE_API_KEY ,searchtype)
+    allhospitals = searchHospital(lat, log, keyword, GOOGLE_API_KEY ,searchtype)
     return allhospitals[:5]
