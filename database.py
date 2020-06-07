@@ -82,10 +82,10 @@ def log(userid, message, direction):
     Log user messages and the replies of bot to DB
     '''
     qry = "INSERT INTO mb_logs (user_id, message, direction, timestamp) VALUES (%s, %s, %s, %s)"
-    time = datetime.datetime.now().timestamp()
+    time = datetime.datetime.now()
     # time = time.strftime("%Y-%m-%d %H:%M:%S")
     print(time)
-    update(qry, (userid, message, direction, time))
+    update(qry, (userid, message, direction, time.timestamp()))
     if direction == 0:
         direction = "FROM"
     elif direction == 1:
