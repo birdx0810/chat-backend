@@ -201,7 +201,7 @@ def get_old_msgs():
     if offset == -1:
         offset = datetime.datetime.now().timestamp()
     elif type(offset) is str:
-        offset = datetime.datetime.fromtimestamp(float(message[4]))
+        offset = datetime.datetime.fromtimestamp(offset)
 
     # Filter messages that are > timestamp
     for message in messages:
