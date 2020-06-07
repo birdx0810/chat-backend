@@ -89,7 +89,7 @@ def high_temp():
     else:
         data = request.json
         userid = db.check_user(data['name'], data['birth'])
-        if userid is None:
+        if userid is []:
             return abort(400, 'Bad Request: User not found')
 
         # (condition.condition_diagnosis)
