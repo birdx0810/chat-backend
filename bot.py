@@ -107,7 +107,7 @@ def high_temp():
     userid = userid[0][0]
     stat = 's1s0'
     session.switch_status(userid, stat)
-    responder.high_temp_resp(userid, session)
+    responder.high_temp_resp(userid, session, socketio)
     return "OK"
 
 @app.route("/event_push_news")
@@ -428,7 +428,7 @@ def handle_message(event):
     elif stat in ["s1s0", "s1s1", "s1d0", "s1d1", "s1d2", "s1d3", "s1d4", "s1d5", "s1d6", "s1s2", "s1s3", "s1s4"]:
         # Respond first then push...
         stat = e.high_temp(event, session)
-        responder.high_temp_resp(userid, session, event)
+        responder.high_temp_resp(userid, session, socketio, event)
 
     # TODO: User in scenario 2
     elif stat in ["s2s1", "s2s2", "s2s3"]:

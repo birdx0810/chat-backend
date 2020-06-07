@@ -211,7 +211,7 @@ def qa_resp(event, session, socketio):
         send(userid=userid, message=msg, session=session, socketio=socketio, event=event)
         session.switch_status(userid, None)
 
-def high_temp_resp(userid, session, event=None):
+def high_temp_resp(userid, session, socketio, event=None):
     '''
     High temperature event responder
     '''
