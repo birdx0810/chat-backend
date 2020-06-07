@@ -277,7 +277,9 @@ def high_temp_resp(userid, session, socketio, event=None):
         ask_clinic = t.yn_template("為了您的安全健康，建議盡快至醫療院所就醫。\n是否需要提供您附近醫療院所的資訊？")
         
         send(userid=userid, message=msg, session=session, socketio=socketio, event=event)
-        send(userid=userid, message=t.flu_info()+"\n"+t.dengue_info(), session=session, socketio=socketio, event=None)
+        
+        info = t.flu_info()+"\n"+t.dengue_info()
+        send(userid=userid, message=info, session=session, socketio=socketio, event=None)
         
         line_bot_api.push_message(userid, ask_clinic)
         send(userid=userid, message=ask_clinic.alt_text, session=session, socketio=socketio, event=event)
