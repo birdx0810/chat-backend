@@ -223,24 +223,24 @@ def symptoms_template():
     return symptoms
 
 def get_nearby_clinic(address, keyword='內科 耳鼻喉科'):
-    try:
-        nearby = gmaps.get_address(address, keyword)
+    # try:
+    nearby = gmaps.get_address(address, keyword)
 
-        # send the nearby clinic to user
-        if len(nearby) >= 1:
-            for pos in nearby:
-                # use url parser to extract latitude and longtitude
-                lat, long = urllib.parse.parse_qs(pos[2])["query"][0].split(",")
+    # send the nearby clinic to user
+    if len(nearby) >= 1:
+        for pos in nearby:
+            # use url parser to extract latitude and longtitude
+            lat, long = urllib.parse.parse_qs(pos[2])["query"][0].split(",")
 
-                message = LocationSendMessage(
-                    title="離您最近的診所是：" + pos[0],
-                    address=pos[1],
-                    latitude=str(lat),
-                    longitude=str(long))
-                break  # now only push the first result
-            pass
-        else:
-            message = TextSendMessage("很抱歉，您附近並沒有相關的診所。")
-    except:
+            message = LocationSendMessage(
+                title="離您最近的診所是：" + pos[0],
+                address=pos[1],
+                latitude=str(lat),
+                longitude=str(long))
+            break  # now only push the first result
+        pass
+    else:
         message = TextSendMessage("很抱歉，您附近並沒有相關的診所。")
+    # except:
+    #     message = TextSendMessage("很抱歉，您附近並沒有相關的診所。")
     return message

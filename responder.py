@@ -51,7 +51,10 @@ def send(userid, message, session, socketio, event=None):
     time = datetime.datetime.now()
     time = time.strftime("%Y-%m-%d %H:%M:%S")
 
-    if event is None:
+
+    if event == False:
+        pass
+    elif event is None:
         line_bot_api.push_message(userid, message)
     else:
         line_bot_api.reply_message(
@@ -223,9 +226,11 @@ def high_temp_resp(userid, session, event=None):
         # Detected user high temperature, ask patient well being
         msg = "您好，手環資料顯示您的體溫似乎比較高，請問您有不舒服的情形嗎？"
         ask_status = t.tf_template(msg)
-        line_bot_api.push_message(userid, ask_status)
 
-    # Status 1 - Ask if feeling sick
+        line_bot_api.push_message(userid, ask_status)
+        send(userid=userid, message=msg, session=session, socketio=socketio, event=False)
+
+    # TODO: Status 1 - Ask if feeling sick
     elif status == 's1s1':
         # If true (not feeling well), ask for symptoms
         symptom_template = t.symptoms_template()
@@ -233,16 +238,15 @@ def high_temp_resp(userid, session, event=None):
             event.reply_token,
             symptom_template
         )
+        print(symptom_template.alt_text)
+        send(userid=userid, message=symptom_template.alt_text, session=session, socketio=socketio, event=False
     elif status == 's1f1':
         # If false (feeling ok), reply msg
         msg = "請持續密切留意您的您的體溫變化，多休息多喝水，至公共場合時記得戴口罩，至公共場合時記得戴口罩,若有任何身體不適仍建議您至醫療院所就醫。"
-        line_bot_api.reply_message(
-            event.reply_token,
-            TextSendMessage(text=msg)
-        )
         session.switch_status(userid, None)
+        send(userid=userid, message=msg, session=session, socketio=socketio, event=event)
 
-    # Status 2 - Ask for symptoms
+    # TODO: Status 2 - Ask for symptoms
     elif status == 's1d0' or status == 's1d1':
         # If '皮膚出疹' & '眼窩痛' detected
         msg = t.symptom_reply[status]
@@ -277,30 +281,34 @@ def high_temp_resp(userid, session, event=None):
     elif status == 's1df':
         # If others
         msg = "請持續密切留意您的您的體溫變化，多休息多喝水，至公共場合時記得戴口罩，至公共場合時記得戴口罩,若有任何身體不適仍建議您至醫療院所就醫。"
-        line_bot_api.reply_message(
-            event.reply_token,
-            TextSendMessage(text=msg)
-        )
+        # line_bot_api.reply_message(
+        #     event.reply_token,
+        #     TextSendMessage(text=msg)
+        # )
+        send(userid=userid, message=msg, session=session, socketio=socketio, event=event)
         session.switch_status(userid, None)
 
     # Status 3: Ask for location
     elif status == 's1s2':
         # If replies to ask for nearby clinic
         msg = "請將您目前的位置傳送給我～"
-        line_bot_api.reply_message(
-            event.reply_token,
-            TextSendMessage(text=msg)
-        )
+        # line_bot_api.reply_message(
+        #     event.reply_token,
+        #     TextSendMessage(text=msg)
+        # )
+        send(userid=userid, message=msg, session=session, socketio=socketio, event=event)
+
     elif status == 's1f2':
         # If doesn't need nearby clinic info
         msg = "請持續密切注意您的體溫變化，多休息多喝水，至公共場合時記得戴口罩，若有任何身體不適仍建議您至醫療院所就醫！"
-        line_bot_api.reply_message(
-            event.reply_token,
-            TextSendMessage(text=msg)
-        )
+        # line_bot_api.reply_message(
+        #     event.reply_token,
+        #     TextSendMessage(text=msg)
+        # )
+        send(userid=userid, message=msg, session=session, socketio=socketio, event=event)
         session.switch_status(userid, None)
 
-    # Status 4: End scenario
+    # TODO: Status 4: Return clinic and end scenario
     elif status == 's1s3':
         # Send clinic info and ask to go see doctor ASAP
         msg =  "請盡快至您熟悉方便的醫療院所就醫。"
@@ -310,6 +318,7 @@ def high_temp_resp(userid, session, event=None):
             clinic
         )
         line_bot_api.push_message(userid, TextSendMessage(text=msg))
+        send(userid=userid, message=msg, session=session, socketio=socketio, event=False)
         session.switch_status(userid, None)
         pass
 
