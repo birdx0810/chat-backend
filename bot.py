@@ -199,7 +199,7 @@ def get_old_msgs():
 
     # Get offset time (-1 == now)
     if offset == -1:
-        offset = datetime.datetime.now()
+        offset = datetime.datetime.now().timestamp()
     elif type(offset) is str:
         offset = datetime.datetime.fromtimestamp(float(message[4]))
 
