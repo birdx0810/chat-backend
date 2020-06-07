@@ -97,8 +97,8 @@ def high_temp():
         # sess.session_update_dialogue(userid,dialogue_code)
         # line_bot_api.push_message(userid, message)
 
-        userid = userid[0][0]
         print(f'User: {userid}')
+        userid = userid[0][0]
         stat = 's1s0'
         session.switch_status(userid, stat)
         responder.high_temp_resp(userid, session)
