@@ -172,7 +172,7 @@ def qa_resp(event, session, socketio):
         # )
         send(userid=userid, message=msg, session=session, socketio=socketio, event=event)
         line_bot_api.push_message(userid, is_correct)
-        send(userid=userid, message=msg, session=session, socketio=socketio, event=False)
+        send(userid=userid, message=is_correct.alt_text, session=session, socketio=socketio, event=False)
 
     elif status == 'qa1_err':
         msg = '不好意思，我不明白你的意思…'

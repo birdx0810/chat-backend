@@ -22,11 +22,12 @@ from linebot.models import (
 )
 
 # Import system modules
-import datetime, time, logging, signal, sys, os
+import datetime, logging, signal, sys, os
 import hashlib
 import json
 import random
 import string
+import pickle
 
 # Import local modules
 import database as db
@@ -60,7 +61,7 @@ else: # Is production
 session = utilities.Session()
 
 ##############################
-# API handler
+# Chatbot API
 ##############################
 # Listen to all POST requests from HOST/callback
 @app.route("/callback", methods=['POST'])
@@ -119,6 +120,10 @@ def push_news():
         session.switch_status(userid, stat)
         responder.push_news_resp(userid)
     pass
+
+#########################
+# Frontend API
+#########################
 
 @app.route("/users", methods=['POST'])
 # @cross_origin(origin='*',headers=['Content-Type','Authorization'])
@@ -237,21 +242,6 @@ def get_old_msgs():
     response.headers['Access-Control-Allow-Origin'] = '*'
     return response
 
-@socketio.on('connect')
-def handle_connection():
-    try:
-        token = request.args.get('auth_token')
-        assert(auth_valid(token))
-    except:
-        return abort(403, 'Forbidden: Authentication is bad')
-    print('SOCKET: Connected')
-    socketio.emit('Response', {"data": "OK"}, broadcast=True)
-    print('SOCKET: Emitted')
-
-@socketio.on_error() # handles the '/chat' namespace
-def error_handler_chat(e):
-    print(e)
-
 @app.route("/send", methods=['POST'])
 def send_msg():
     try:
@@ -282,7 +272,7 @@ def send_msg():
 
     db.log(userid, message, direction=1)
 
-    print("SOCKET: Sending to Front-End")
+    print(f"SOCKET: Sending to Front-End\n{data['message']}")
     socketio.emit('Message', json, json=True, broadcast=True)
     print("SOCKET: Emitted to Front-End")
 
@@ -290,7 +280,6 @@ def send_msg():
     response.headers['Access-Control-Allow-Origin'] = '*'
     return response
 
-# TODO
 @app.route("/broadcast", methods=['POST'])
 def broadcast_msg():
     users = db.get_users()
@@ -300,9 +289,13 @@ def broadcast_msg():
 
 @app.route("/login", methods=['POST'])
 def log_in():
-    data = request.get_json(force=True)
-    username = data["username"]
-    psw = data["password"]
+    try:
+        data = request.get_json(force=True)
+        username = data["username"]
+        psw = data["password"]
+    except:
+        response = flask.Response(status=400, "Bad Request")
+        return response
 
     result = db.get_admin()
     for res in result:
@@ -311,17 +304,21 @@ def log_in():
             break
         else: success = False
 
-    if success:
+    if success == True:
         token = find_token_of_admin(username)
         if token == None:
             token = generate_token(username)
-        response = flask.Response(response=token, status=401)
+        response = flask.Response(response=token, status=200)
 
-    else:
-        response = flask.Response("Failed")
+    elif success == False:
+        response = flask.Response(status=401, "Unauthorized")
 
     response.headers['Access-Control-Allow-Origin'] = '*'
     return response
+
+#########################
+# Authentication variables and functions
+#########################
 
 auths = {}
 
@@ -345,46 +342,77 @@ def auth_valid(token):
     else:
         return False
 
-def message_callback(userid):
-    # Get offset time (-1 == now)
-    if offset == -1:
-        offset = datetime.datetime.now()
-    elif type(offset) is str:
-        offset = datetime.datetime# .strptime(offset, "%Y-%m-%d %H:%M:%S")
+# TODO: Save when signal interrupted
+def save_auths():
+    path = "session/admin.pickle"
+    with open(path, "wb") as f:
+        pickle.dump(auths, f)
 
-    # Filter messages that are > timestamp
-    for message in messages:
-        message = list(message)
-        message[4] = datetime.datetime# .strptime(message[4], "%Y-%m-%d %H:%M:%S")
-        if message[4] < offset:
-            filtered.append(message)
+def get_auths():
+    path = "session/admin.pickle"
+    with open(path, "rb") as f:
+        pickle.load(f)
 
-    temp = []
+# def message_callback(userid):
+#     # Get offset time (-1 == now)
+#     if offset == -1:
+#         offset = datetime.datetime.now()
+#     elif type(offset) is str:
+#         offset = datetime.datetime# .strptime(offset, "%Y-%m-%d %H:%M:%S")
 
-    if len(filtered) >= max_amount:
-        for count in range(max_amount):
-            print(filtered[count][2])
-            temp.append({
-                "msg_id": filtered[count][0],
-                "user_name":  session.status[filtered[count][1]]["user_name"],
-                "content": filtered[count][2],
-                "direction": filtered[count][3],
-                "timestamp": filtered[count][4]# .strftime("%Y-%m-%d %H:%M:%S"),
-            })
-    else:
-        for message in filtered:
-            print(message[2])
-            temp.append({
-                "msg_id": message[0],
-                "user_name":  session.status[message[1]]["user_name"],
-                "content": message[2],
-                "direction": message[3],
-                "timestamp": message[4]# .strftime("%Y-%m-%d %H:%M:%S"),
-            })
+#     # Filter messages that are > timestamp
+#     for message in messages:
+#         message = list(message)
+#         message[4] = datetime.datetime# .strptime(message[4], "%Y-%m-%d %H:%M:%S")
+#         if message[4] < offset:
+#             filtered.append(message)
 
-    response = flask.Response(str(temp))
-    response.headers['Access-Control-Allow-Origin'] = '*'
-    return response
+#     temp = []
+
+#     if len(filtered) >= max_amount:
+#         for count in range(max_amount):
+#             print(filtered[count][2])
+#             temp.append({
+#                 "msg_id": filtered[count][0],
+#                 "user_name":  session.status[filtered[count][1]]["user_name"],
+#                 "content": filtered[count][2],
+#                 "direction": filtered[count][3],
+#                 "timestamp": filtered[count][4]# .strftime("%Y-%m-%d %H:%M:%S"),
+#             })
+#     else:
+#         for message in filtered:
+#             print(message[2])
+#             temp.append({
+#                 "msg_id": message[0],
+#                 "user_name":  session.status[message[1]]["user_name"],
+#                 "content": message[2],
+#                 "direction": message[3],
+#                 "timestamp": message[4]# .strftime("%Y-%m-%d %H:%M:%S"),
+#             })
+
+#     response = flask.Response(str(temp))
+#     response.headers['Access-Control-Allow-Origin'] = '*'
+#     return response
+
+#########################
+# socket connection
+#########################
+
+@socketio.on('connect')
+def handle_connection():
+    try:
+        token = request.args.get('auth_token')
+        assert(auth_valid(token))
+    except:
+        return abort(403, 'Forbidden: Authentication is bad')
+    print('SOCKET: Connected')
+    socketio.emit('Response', {"data": "OK"}, broadcast=True)
+    print('SOCKET: Emitted')
+
+@socketio.on_error()
+def error_handler_chat(e):
+    print(e)
+
 
 ##############################
 # Message handler
@@ -410,7 +438,7 @@ def handle_message(event):
     stat = session.get_status(userid)
 
     # Log user metadata
-    print(f'User: {userid}')
+    print(f'\nUser: {userid}')
     print(f'Message: {usermsg}')
     print(f'Status: {stat}\n')
 
@@ -424,9 +452,9 @@ def handle_message(event):
     db.log(userid, usermsg, direction=0)
 
     if stat not in ["r", "r0", "r1", "r2", "r_err"]:
-        print("SOCKET: Sending to Front-End")
+        print(f"SOCKET: Sending to Front-End\n{usermsg}")
         socketio.emit('Message', json, json=True, broadcast=True)
-        print("SOCKET: Emitted to Front-End")
+        print(f"SOCKET: Emitted to Front-End")
 
     # User in registration
     if stat in ["r", "r0", "r1", "r2", "r_err"]:
