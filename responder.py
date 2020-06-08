@@ -109,12 +109,12 @@ def registration_resp(event, status, session, socketio):
         # send(userid=userid, message=msg, session=session, socketio=socketio, event=event)
     elif status == 'r2':
         msg = "註冊成功啦"
-        line_bot_api.reply_message(
-            event.reply_token,
-            TextSendMessage(text=msg)
-        )
-        db.log(userid, msg, direction=1)
-        # send(userid=userid, message=msg, session=session, socketio=socketio, event=event)
+        # line_bot_api.reply_message(
+        #     event.reply_token,
+        #     TextSendMessage(text=msg)
+        # )
+        # db.log(userid, msg, direction=1)
+        send(userid=userid, message=msg, session=session, socketio=socketio, event=event)
         session.status[userid]['sess_status'] = session.init_state
     elif status == 'r_err':
         status = session.status[userid]['sess_status']
