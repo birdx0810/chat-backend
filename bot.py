@@ -294,7 +294,7 @@ def log_in():
         username = data["username"]
         psw = data["password"]
     except:
-        response = flask.Response(status=400, "Bad Request")
+        response = flask.Response(status=400)
         return response
 
     result = db.get_admin()
@@ -311,7 +311,7 @@ def log_in():
         response = flask.Response(response=token, status=200)
 
     elif success == False:
-        response = flask.Response(status=401, "Unauthorized")
+        response = flask.Response(status=401)
 
     response.headers['Access-Control-Allow-Origin'] = '*'
     return response
