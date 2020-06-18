@@ -14,13 +14,13 @@ import click
 
 # Import system modules
 import datetime, re
+import json
+import os
 
-config = {
-    'host': '127.0.0.1',
-    'user': 'mb-admin',
-    'password': 'c19W27yrb',
-    'database': 'medbot_db',
-}
+import utilities
+
+# Is development or production
+config = utilities.get_config(utilities.environment.get_env())
 
 # Connect to DB
 def connect():

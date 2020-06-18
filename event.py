@@ -21,18 +21,17 @@ import os
 import sys
 
 import database as db
+import utilities
 
 # Setup path for other modules
 sys.path.insert(0, os.path.dirname(
     os.path.realpath(__file__)) + "/./ChineseNER")
 
-# Is development or production
-is_development=True
-if is_development:
-    # Channel Access Token
-    line_bot_api = LineBotApi('XEQclTuSIm6/pcNNB4W9a2DDX/KAbCBmZS4ltBl+g8q2IxwJyqdtgNNY9KtJJxfkuXbHmSdQPAqRWjAciP2IZgrvLoF3ZH2C2Hg+zZMgoy/xM/RbnoFa2eO9GV2F4E1qmjYxA0FbJm1uZkUms9o+4QdB04t89/1O/w1cDnyilFU=')
-    # Channel Secret
-    handler = WebhookHandler('fabfd7538c098fe222e8012e1df65740')
+keys = utilities.get_key(utilities.environment.get_env())
+# Channel Access Token
+line_bot_api = LineBotApi(keys[0])
+# Channel Secret
+handler = WebhookHandler(keys[1])
 
 ##############################
 # Scenario R: Registration flow

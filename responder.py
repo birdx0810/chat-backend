@@ -31,18 +31,12 @@ import templates as t
 ##############################
 # Application & variable initialization
 ##############################
-# Is development or production
-is_development=True
-if is_development:
-    # Channel Access Token
-    line_bot_api = LineBotApi('XEQclTuSIm6/pcNNB4W9a2DDX/KAbCBmZS4ltBl+g8q2IxwJyqdtgNNY9KtJJxfkuXbHmSdQPAqRWjAciP2IZgrvLoF3ZH2C2Hg+zZMgoy/xM/RbnoFa2eO9GV2F4E1qmjYxA0FbJm1uZkUms9o+4QdB04t89/1O/w1cDnyilFU=')
-    # Channel Secret
-    handler = WebhookHandler('fabfd7538c098fe222e8012e1df65740')
-else: # Is production
-    # Channel Access Token
-    line_bot_api = LineBotApi('8kCwJkbO0Ps6ftZfFSJmBjmc+VrpNB0x4lMn+pEUNV4t306quG5AQKUnPGHNqw8sYFIQL7086mkTQdQj4iC/zUgwKRZMPHCKaxc5N1buQSY+rzGohXfiwldZbkTQQj/sDK7tv8URS5C9sx7kwkfQRAdB04t89/1O/w1cDnyilFU=')
-    # Channel Secret
-    handler = WebhookHandler('5e438935670953f040569105b3d527e1')
+
+keys = utilities.get_key(utilities.environment.get_env())
+# Channel Access Token
+line_bot_api = LineBotApi(keys[0])
+# Channel Secret
+handler = WebhookHandler(keys[1])
 
 def send(userid, message, session, socketio, event=None):
     '''

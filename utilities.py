@@ -44,7 +44,10 @@ class Log():
 class Session():
     def __init__(self):
         # Session file path
-        self.path = './session/session.pickle'
+        self.dirpath = os.path.abspath(
+            f"{os.path.abspath(__file__)}/../session/"
+        )
+        self.path = f"{self.dirpath}/session.pickle"
         # User session status
         self.status = {}
         # Initial state
@@ -65,6 +68,9 @@ class Session():
         '''
         Save session to a pickle file
         '''
+        if not os.path.exists(self.dirpath):
+            os.makedirs(self.dirpath)
+
         with open(self.path, 'wb') as f:
             pickle.dump(self.status, f)
         print(f"\n{self.highlight}Saved session to \"{self.path}\"\n{self.highlight}")
@@ -79,7 +85,6 @@ class Session():
             print(f"\n{self.highlight}Retrieved session file with {len(self.status)} users\n{self.highlight}")
         else:
             print(f"\n{self.highlight}No session file found. Using a new session.\n{self.highlight}")
-            self.status = {}
 
     def add_status(self, userid):
         '''
@@ -124,10 +129,74 @@ class Session():
             users.append(user)
         return users
 
+def get_key(env):
+    '''
+    Get API and webhook key for given environment
+    '''
+    if env == "development":
+        path = os.path.abspath(
+            f"{os.path.abspath(__file__)}/../key/development"
+        )
+    elif env == "production":
+        path = os.path.abspath(
+            f"{os.path.abspath(__file__)}/../key/production"
+        )
+    else:
+        raise ValueError("Invalid `env`, must be `development` or `production`")
+
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"{path} does not exist")
+
+    with open(path, "r") as f:
+        keys = [line.strip() for line in f.readlines()]
+    
+    return keys
+
+def get_config(env):
+    '''
+    Get database config file
+    '''
+    if env == "development":
+        path = os.path.abspath(
+            f"{os.path.abspath(__file__)}/../config/development.json"
+        )
+    elif env == "production":
+        path = os.path.abspath(
+            f"{os.path.abspath(__file__)}/../config/production.json"
+        )
+    else:
+        raise ValueError("Invalid `env`, must be `development` or `production`")
+    
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"{path} does not exist")
+
+    with open(path, "r") as f:
+        keys = [line.strip() for line in f.readlines()]
+    
+    return keys
+
+class __Environment():
+    def __init__(self, env):
+        self.env = env
+        self.freeze = False
+
+    def lock(self):
+        self.freeze = True
+
+    def set_env(self, env):
+        if self.freeze:
+            raise ValueError('Try to update environment')
+        self.env = env
+
+    def get_env(self):
+        return self.env
+
+    def is_development(self):
+        return self.get_env() == 'development'
+
+environment = __Environment('development')
+
 # Unit test for log or session
 if __name__ == "__main__":
-    import database as db
-    session = Session()
-    session.load_session()
-    db.sync(session)
-    pass
+    key = get_key("production")
+    print(key)
