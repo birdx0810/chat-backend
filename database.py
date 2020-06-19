@@ -26,7 +26,6 @@ config = environment.get_config(environment.environment.get_env())
 
 # Connect to DB
 
-
 def connect():
     '''
     Initialize the connection to DB
@@ -134,7 +133,7 @@ def update(qry, var):
 # Other functions
 
 
-def log(user_id, message, direction, timestamp=None):
+def log(direction=None, message=None, timestamp=None, user_id=None):
     '''
     Log user messages and the replies of bot to DB
     '''
@@ -168,7 +167,7 @@ def get_users():
     return result
 
 
-def get_messages(user_id):
+def get_messages(user_id=None):
     '''
     Gets all messages from database
     '''
@@ -178,11 +177,12 @@ def get_messages(user_id):
         WHERE user_id=%s 
         ORDER BY timestamp DESC;
     """
+
     result = query_all(qry, (user_id,))
     return result
 
 
-def get_last_message(user_id):
+def get_last_message(user_id=None):
     '''
     Get last message
     '''
@@ -201,7 +201,7 @@ def get_last_message(user_id):
     return result["message"]
 
 
-def get_user_id(name, birth, nric=None):
+def get_user_id(birth=None, name=None, nric=None):
     '''
     Get user user_id with `user_name` and `user_bday`
     Returns matched user_id
@@ -221,7 +221,7 @@ def get_user_id(name, birth, nric=None):
     return result["user_id"]
 
 
-def get_user_name(user_id):
+def get_user_name(user_id=None):
     '''
     Get user `user_name` with `user_id`
     Returns matched `user_name`
@@ -239,12 +239,13 @@ def get_user_name(user_id):
     return result["user_name"]
 
 
-def get_status(user_id):
+def get_status(user_id=None):
     qry = """
     SELECT user_status
     FROM mb_user
     WHERE user_id=%s;
     """
+
     result = query_one(qry, (user_id,))
 
     if result == None:
@@ -253,7 +254,7 @@ def get_status(user_id):
     return result["user_status"]
 
 
-def add_user(user_id):
+def add_user(user_id=None):
     qry = """
         INSERT INTO mb_user (user_id)
         VALUES (%s);
@@ -264,7 +265,7 @@ def add_user(user_id):
     # TODO: Error Notification
 
 
-def update_status(user_id, status):
+def update_status(status=None, user_id=None):
     qry = """
         UPDATE mb_user
         SET user_status=%s
@@ -275,10 +276,10 @@ def update_status(user_id, status):
 
     # TODO: Error Notification
 
-    return get_status(user_id)
+    return get_status(user_id=user_id)
 
 
-def update_user_name(user_id, user_name):
+def update_user_name(user_id=None, user_name=None):
     qry = """
         UPDATE mb_user
         SET user_name=%s, user_status='r1'
@@ -290,7 +291,7 @@ def update_user_name(user_id, user_name):
     # TODO: Error Notification
 
 
-def update_user_bday(user_id, user_bday):
+def update_user_bday(user_id=None, user_bday=None):
     qry = """
         UPDATE mb_user
         SET user_bday=%s, user_status='r2'
@@ -303,7 +304,6 @@ def update_user_bday(user_id, user_bday):
 
 
 def get_admin():
-    conn = mariadb.connect(**config)
     qry = """
         SELECT admin_name, admin_pass
         FROM mb_admin;

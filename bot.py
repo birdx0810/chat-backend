@@ -63,10 +63,9 @@ handler = WebhookHandler(keys[1])
 session = utilities.Session()
 
 ##############################
-# Chatbot API
+# Callback API
 ##############################
 # Listen to all POST requests from HOST/callback
-
 
 @app.route("/callback", methods=['POST'])
 def callback():
@@ -86,46 +85,48 @@ def callback():
 # API for triggering event.high_temp case
 # Accepts a json file with line_id and
 
-
-@app.route('/event_high_temp', methods=['POST'])
+@app.route("/event_high_temp", methods=["POST"])
 def high_temp():
-    if request.headers['Content-Type'] != 'application/json':
-        return abort(400, 'Bad Request: Please use `json` format')
-    elif request.method != 'POST':
-        return abort(403, 'Forbidden: Please use `POST` request')
+    if request.headers["Content-Type"] != "application/json":
+        return abort(400, "Bad Request: Please use `json` format")
     try:
+        # Known issue user name and birthday conflict
         data = request.json
-        user_id = db.get_user_id(data['name'], data['birth'])
+        user_id = db.get_user_id(birth=data["birth"], name=data["name"])
         if user_id == None:
             raise ValueError(
                 f"User ID not found:\nUsername: {data['name']}\nUser BDay: {data['birth']}")
-    except ValueError as e:
-        traceback.format_exc()
-
+    except Exception as e:
+        print(e)
         print(traceback.format_exc())
-        return abort(404, 'Not Found: User ID not found')
+        return abort(404, "Not Found: User ID not found")
 
-    user_id = user_id[0][0]
-    stat = 's1s0'
-    session.switch_status(user_id, stat)
-    responder.high_temp_resp(user_id, socketio)
+    status = db.update_status(status="s1s0", user_id=user_id)
+    responder.high_temp(
+        event=None,
+        socketio=socketio,
+        status=status,
+        user_id=user_id
+    )
     return "OK"
 
+#########################
+# Scenario 2
+#########################
 
-@app.route("/event_push_news")
-def push_news():
-    users = session.get_users()
-    for user_id in users:
-        print(f'User: {user_id}')
-        stat = 's2s0'
-        session.switch_status(user_id, stat)
-        responder.push_news_resp(user_id)
-    pass
+# @app.route("/event_push_news")
+# def push_news():
+#     users = session.get_users()
+#     for user_id in users:
+#         print(f'User: {user_id}')
+#         stat = 's2s0'
+#         session.switch_status(user_id, stat)
+#         responder.push_news(user_id)
+#     pass
 
 #########################
 # Frontend API
 #########################
-
 
 @app.route("/users", methods=['POST'])
 # @cross_origin(origin='*',headers=['Content-Type','Authorization'])
@@ -163,7 +164,6 @@ def get_user():
     response.headers['Access-Control-Allow-Origin'] = '*'
     return response
 
-
 @app.route("/messages", methods=['POST'])
 def get_old_msgs():
     '''
@@ -193,7 +193,7 @@ def get_old_msgs():
     offset = data["timestamp_offset"]
     max_amount = data["max_amount"]
 
-    messages = db.get_messages(user_id)
+    messages = db.get_messages(user_id=user_id)
     filtered = []
 
     # Get offset time (-1 == now)
@@ -236,7 +236,6 @@ def get_old_msgs():
     response.headers['Access-Control-Allow-Origin'] = '*'
     return response
 
-
 @app.route("/send", methods=['POST'])
 def send_msg():
     try:
@@ -265,7 +264,11 @@ def send_msg():
         "direction": 1,
     }
 
-    db.log(user_id, data["message"], direction=1)
+    db.log(
+        direction=1,
+        message=data["message"],
+        user_id=user_id
+    )
 
     print(f"SOCKET: Sending to Front-End\n{data['message']}")
     socketio.emit('Message', frontend_data, json=True, broadcast=True)
@@ -275,14 +278,12 @@ def send_msg():
     response.headers['Access-Control-Allow-Origin'] = '*'
     return response
 
-
 @app.route("/broadcast", methods=['POST'])
 def broadcast_msg():
     users = db.get_users()
     for user in users:
         # send_msg()
         pass
-
 
 @app.route("/login", methods=['POST'])
 def log_in():
@@ -318,9 +319,7 @@ def log_in():
 # Authentication variables and functions
 #########################
 
-
 auths = {}
-
 
 def generate_token(username):
     size = 15
@@ -329,13 +328,11 @@ def generate_token(username):
     auths[token] = username
     return token
 
-
 def find_token_of_admin(username):
     for token, value in auths.items():
         if value == username:
             return token
     return None
-
 
 def auth_valid(token):
     if len(auths.keys()) > 0:
@@ -347,12 +344,10 @@ def auth_valid(token):
 
 # TODO: Save when signal interrupted
 
-
 def save_auths():
     path = "session/admin.pickle"
     with open(path, "wb") as f:
         pickle.dump(auths, f)
-
 
 def get_auths():
     path = "session/admin.pickle"
@@ -362,7 +357,6 @@ def get_auths():
 #########################
 # socket connection
 #########################
-
 
 @socketio.on('connect', namespace="/")
 def handle_connection():
@@ -375,12 +369,9 @@ def handle_connection():
     socketio.emit('Response', {"data": "OK"}, broadcast=True)
     print('SOCKET: Emitted')
 
-
 @socketio.on_error()
 def error_handler_chat(e):
     print(e)
-
-
 
 ##############################
 # Message handler
@@ -402,11 +393,11 @@ def handle_message(event):
     timestamp = event.timestamp/1000
 
     # TODO: check timeout
-    status = db.get_status(user_id)
+    status = db.get_status(user_id=user_id)
 
     if status == None:
-        db.add_user(user_id)
-        status = db.get_status(user_id)
+        db.add_user(user_id=user_id)
+        status = db.get_status(user_id=user_id)
 
     # Log user metadata
     print(f'\nUser: {user_id}')
@@ -414,36 +405,78 @@ def handle_message(event):
     print(f'Status: {status}\n')
 
     # Send user message to frontend
-    responder.send_frontend(user_id, user_msg, socketio=socketio, direction=0)
+    responder.send_frontend(
+        direction=0,
+        socketio=socketio,
+        user_id=user_id,
+        message=user_msg
+    )
 
     # Log user message to database
-    db.log(user_id, user_msg, direction=0, timestamp=timestamp)
+    db.log(
+        direction=0,
+        timestamp=timestamp,
+        message=user_msg,
+        user_id=user_id
+    )
 
     # User in registration
     if status in ["r", "r0", "r1", "r_err"]:
-        status = e.registration(user_id, user_msg, status)
-        responder.registration_resp(event, status, socketio)
+        status = e.registration(
+            message=user_msg,
+            status=status,
+            user_id=user_id
+        )
+        responder.registration(
+            event=event,
+            socketio=socketio,
+            status=status
+        )
 
     # User trigger QA
     elif status == "s" and user_msg == '/qa':
         status = "qa0"
-        db.update_status(user_id, status)
-        responder.qa_resp(event, status, socketio)
+        db.update_status(
+            status=status,
+            user_id=user_id,
+        )
+        responder.qa(
+            event=event,
+            socketio=socketio,
+            status=status
+        )
 
     elif status in ["qa0", "qa1", "qa2_f"]:
-        status = e.qa(event, status)
-        responder.qa_resp(event, status, socketio)
+        status = e.qa(
+            event=event,
+            status=status
+        )
+        responder.qa(
+            event=event,
+            socketio=socketio,
+            status=status
+        )
 
     # User in scenario 1
-    elif status in ["s1s0", "s1s1", "s1d0", "s1d1", "s1d2", "s1d3", "s1d4", "s1d5", "s1d6", "s1s2", "s1s3", "s1s4"]:
-        # Respond first then push...
-        status = e.high_temp(event, session)
-        responder.high_temp_resp(user_id, socketio, event)
+    elif status in ["s1s0", "s1s1", "s1d0", "s1d1", "s1d2",
+                    "s1d3", "s1d4", "s1d5", "s1d6", "s1s2",
+                    "s1s3", "s1s4"]:
+        status = e.high_temp(
+            event=event,
+            status=status
+        )
+        responder.high_temp(
+            event=event,
+            socketio=socketio,
+            status=status
+        )
 
+    #########################
     # TODO: User in scenario 2
-    elif status in ["s2s1", "s2s2", "s2s3"]:
-        status = e.push_news(user_id, user_msg, session)
-        responder.push_news_resp(event, session)
+    #########################
+    # elif status in ["s2s1", "s2s2", "s2s3"]:
+    #     status = e.push_news(user_id, user_msg, session)
+    #     responder.push_news(event, session)
 
     '''
     (DEPRECATED) User in chat state (currently unable to communicate)
@@ -458,40 +491,36 @@ def handle_message(event):
 
 # Sticker message handler (echo)
 '''
-Stickers should not affect user status
+Deprecated: Stickers should not affect user status
 '''
 
+# @handler.add(MessageEvent, message=StickerMessage)
+# def handle_message(event):
+#     # Retrieve message metadata
+#     id = event.message.id
+#     sticker_id = event.message.sticker_id
+#     package_id = event.message.package_id
 
-@handler.add(MessageEvent, message=StickerMessage)
-def handle_message(event):
-    # Retrieve message metadata
-    id = event.message.id
-    sticker_id = event.message.sticker_id
-    package_id = event.message.package_id
-
-    line_bot_api.reply_message(
-        event.reply_token,
-        StickerMessage(id=id, sticker_id=sticker_id, package_id=package_id)
-    )
-    pass
+#     line_bot_api.reply_message(
+#         event.reply_token,
+#         StickerMessage(id=id, sticker_id=sticker_id, package_id=package_id)
+#     )
+#     pass
 
 ##############################
 # Main function
 ##############################
 
-
 if __name__ == "__main__":
-    # Load session
-    # session.load_session()
-
-    client_status = {}
-
-    # Hook interrupt signal
-    # signal.signal(signal.SIGINT, session.signal_handler)
-
     # Setup host port
     port = int(os.environ.get('PORT', 8080))
     socketio.run(app, host='0.0.0.0', port=port, debug=True)
+
+    # Load session
+    # session.load_session()
+
+    # Hook interrupt signal
+    # signal.signal(signal.SIGINT, session.signal_handler)
 
     # Call function at apointed time
     # while True:

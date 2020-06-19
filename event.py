@@ -40,7 +40,7 @@ handler = WebhookHandler(keys[1])
 ##############################
 
 
-def registration(user_id, message, status):
+def registration(message=None, status=None, user_id=None):
     '''
     This is the main function for the registration flow
     Updates the sessionion dictionary and returns status of user
@@ -50,11 +50,12 @@ def registration(user_id, message, status):
 
     # New user_id detected (not in session)
     if status == 'r':
-        return db.update_status(user_id, 'r0')
+        return db.update_status(status='r0', user_id=user_id)
+
     # Get user Chinese name
     elif status == 'r0':
         if 0 < len(message) <= 20 and re.match(r'[\u4e00-\u9fff]{1,20}', message):
-            db.update_user_name(user_id, message)
+            db.update_user_name(user_id=user_id, user_name=message)
             return "r1"
         else:
             return "r_err"
@@ -74,7 +75,7 @@ def registration(user_id, message, status):
                 raise ValueError("Impossible birthday")
         except:
             return "r_err"
-        db.update_user_bday(user_id, user_bday)
+        db.update_user_bday(user_id=user_id, user_bday=user_bday)
         return "r2"
     else:
         raise ValueError(f"Invalid status code: {status}")
@@ -86,7 +87,7 @@ def registration(user_id, message, status):
 ##############################
 
 
-def qa(event, status):
+def qa(event=None, status=None):
     '''
     Event handler for QA
     '''
@@ -96,104 +97,65 @@ def qa(event, status):
 
 
     if status == "qa0":
-        return db.update_status(user_id, "qa1")
+        return db.update_status(status="qa1", user_id=user_id)
 
     elif status == "qa1":
         if message in templates.T:
-            return db.update_status(user_id, "qa2_t")
+            return db.update_status(status="qa2_t", user_id=user_id)
         elif message in templates.F:
-            return db.update_status(user_id, "qa2_f")
+            return db.update_status(status="qa2_f", user_id=user_id)
         else:
             return "qa1_err"
 
     elif status == "qa2_f":
-        return db.update_status(user_id, "qa3")
+        return db.update_status(status="qa3", user_id=user_id)
 
 ##############################
 # Scenario 1: Detected high temperature from user smart-band
 ##############################
 # TODO: change inputs
 
-
-def high_temp(event, session):
+def high_temp(event=None, status=None):
     '''
     High temperature event handler and push message
     '''
     user_id = event.source.user_id
     message = event.message.text
-    status = session.status[user_id]['sess_status']
 
-    # trad2sim = OpenCC("t2s")
-    # sim2trad = OpenCC("s2t")
-
-    symptom = ['皮膚出疹', '眼窩痛', '喉嚨痛', '咳嗽', '咳血痰', '肌肉酸痛']
-
-    T = ["有", "要", "有喔", "有阿", "好", "好喔", "好阿", "可",
-         "可以", "可以阿", "Yes", "有一點", "一點", "一點點", "是"]
-    F = ["沒有", "不要", "不", "沒", "No", "無", "否"
-         "不用", "曾經有", "曾經", "以前有", "以前", "不是"]
-
-    # if status == 's1':
-    #     # API triggered, will ask if not feeling well
-    #     session.switch_status(user_id, 's1s0')
-    #     return 's1s0'
-
-    if status == 's1s0':
+    if status == "s1s0":
         # TODO: # API triggered, will ask if not feeling well (T/F reply)
-        if message in T:
-            status = 's1s1'
-            session.switch_status(user_id, status)
-            return status
-        elif message in F:
-            status = 's1f1'
-            session.switch_status(user_id, status)
-            return status
+        if message in templates.T:
+            return db.update_status(status="s1s1", user_id=user_id)
+        elif message in templates.F:
+            return db.update_status(status="s1f1", user_id=user_id)
 
-    elif status == 's1s1':
+
+    elif status == "s1s1":
         # TODO: Check for symptoms in reply (doctor)
-        if message == symptom[0]:
-            status = 's1d0'
-            session.switch_status(user_id, status)
-            return status
-        elif message == symptom[1]:
-            status = 's1d1'
-            session.switch_status(user_id, status)
-            return status
-        elif message == symptom[2]:
-            status = 's1d2'
-            session.switch_status(user_id, status)
-            return status
-        elif message == symptom[3]:
-            status = 's1d3'
-            session.switch_status(user_id, status)
-            return status
-        elif message == symptom[4]:
-            status = 's1d4'
-            session.switch_status(user_id, status)
-            return status
-        elif message == symptom[5]:
-            status = 's1d5'
-            session.switch_status(user_id, status)
-            return status
+        if message == templates.symptom[0]:
+            return db.update_status(status="s1d0", user_id=user_id)
+        elif message == templates.symptom[1]:
+            return db.update_status(status="s1d1", user_id=user_id)
+        elif message == templates.symptom[2]:
+            return db.update_status(status="s1d2", user_id=user_id)
+        elif message == templates.symptom[3]:
+            return db.update_status(status="s1d3", user_id=user_id)
+        elif message == templates.symptom[4]:
+            return db.update_status(status="s1s4", user_id=user_id)
+        elif message == templates.symptom[5]:
+            return db.update_status(status="s1s5", user_id=user_id)
         else:
-            status = 's1df'
-            session.switch_status(user_id, status)
-            return status
+            return db.update_status(status="s1df", user_id=user_id)
 
-    elif status in ['s1d0', 's1d1', 's1d2', 's1d3', 's1d4', 's1d5']:
-        if message in T:
-            status = 's1s2'
-            session.switch_status(user_id, status)
-            return status
-        elif message in F:
-            status = 's1f2'
-            session.switch_status(user_id, status)
-            return status
+    elif status in ["s1d0", "s1d1", "s1d2", "s1d3", "s1d4", "s1d5"]:
+        if message in templates.T:
+            return db.update_status(status="s1s2", user_id=user_id)
 
-    elif status == 's1s2':
-        status = 's1s3'
-        session.switch_status(user_id, status)
-        return status
+        elif message in templates.F:
+            return db.update_status(status="s1f2", user_id=user_id)
+
+    elif status == "s1s2":
+            return db.update_status(status="s1s3", user_id=user_id)
 
 
 ##############################

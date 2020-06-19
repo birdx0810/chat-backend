@@ -83,8 +83,8 @@ def want_template(msg):
 ##############################
 
 registration_err_msg = {
-    'r0': "請輸入您的中文姓名（e.g. 王小明）",
-    'r1': "請輸入您的生日（年年年年月月日日）"
+    "r0": "請輸入您的中文姓名（e.g. 王小明）",
+    "r1": "請輸入您的生日（年年年年月月日日）"
 }
 
 registration_greeting = "初次見面，請輸入您的中文姓名（e.g. 王小明）"
@@ -93,7 +93,7 @@ registration_birthday = "請輸入您的生日（年年年年月月日日）"
 
 registration_successful = "註冊成功啦"
 
-def registration_err(status):
+def registration_err(status="r0"):
     return "不好意思，您的輸入不符格式。\n" + registration_err_msg[status]
 
 
@@ -193,9 +193,12 @@ def qa_template():
         )
     )
 
+##############################
+# Scenario 1: High Temp Templates
+##############################
 
+symptom = ['皮膚出疹', '眼窩痛', '喉嚨痛', '咳嗽', '咳血痰', '肌肉酸痛']
 
-# Scenario 1
 symptom_reply = {
     's1d0': "體溫異常升高，加上皮膚出疹為疑似登革熱情形，但這只是初步懷疑請不用太過驚慌，以下為相關資訊提供給您！",
     's1d1': "體溫異常升高，加上眼窩痛為疑似登革熱情形，但這只是初步懷疑請不用太過驚慌，以下為相關資訊提供給您！",
@@ -204,6 +207,16 @@ symptom_reply = {
     's1d4': "體溫異常升高，加上咳血痰為疑似流感情形，但這只是初步懷疑請不用太過驚慌，以下為相關資訊提供給您！",
     's1d5': "體溫異常升高，加上肌肉酸痛為疑登革熱/流感 情形，但這只是初步懷疑請不用太過驚慌，以下為相關資訊提供給您！"
 }
+
+high_temp_greeting = "您好，手環資料顯示您的體溫似乎比較高，請問您有不舒服的情形嗎？"
+
+high_temp_ending = "請持續密切留意您的您的體溫變化，多休息多喝水，至公共場合時記得戴口罩，至公共場合時記得戴口罩,若有任何身體不適仍建議您至醫療院所就醫。"
+
+high_temp_ask_clinic = "為了您的安全健康，建議盡快至醫療院所就醫。\n是否需要提供您附近醫療院所的資訊？"
+
+high_temp_ask_location = "請將您目前的位置傳送給我～"
+
+high_temp_asap = "請盡快至您熟悉方便的醫療院所就醫。"
 
 
 def flu_reply():
@@ -214,7 +227,6 @@ def flu_reply():
         "請問是否需要提供您附近醫療院所的資訊"
     ]
     return "\n".join(reply)
-
 
 def dengue_reply():
     reply = [
@@ -238,7 +250,6 @@ def dengue_info():
     info = ["登革熱", "https://www.cdc.gov.tw/Disease/SubIndex/WYbKe3aE7LiY5gb-eA8PBw"]
     info = "\n".join(info)
     return info
-
 
 def symptoms_template():
     symptom = ['皮膚出疹', '眼窩痛', '喉嚨痛', '咳嗽', '咳血痰', '肌肉酸痛']
