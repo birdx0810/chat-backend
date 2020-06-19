@@ -34,6 +34,7 @@ import database as db
 import event as e
 import templates as t
 import utilities, responder
+import environment
 
 ##############################
 # Application & variable initialization
@@ -44,10 +45,10 @@ cors = CORS(app, resources={r"/foo": {"origins": "*"}})
 app.config['CORS_HEADERS'] = 'Content-Type'
 socketio = SocketIO(app, async_mode='eventlet', cors_allowed_origins='*')
 
-utilities.environment.set_env("development")
-utilities.environment.lock()
+environment.environment.set_env("development")
+environment.environment.lock()
 
-keys = utilities.get_key(utilities.environment.get_env())
+keys = environment.get_key(environment.environment.get_env())
 # Channel Access Token
 line_bot_api = LineBotApi(keys[0])
 # Channel Secret
@@ -85,36 +86,27 @@ def high_temp():
         return abort(403, 'Forbidden: Please use `POST` request')
     try:
         data = request.json
-        userid = db.check_user(data['name'], data['birth'])
-        assert(userid != [])
+        user_id = db.get_user_id(data['name'], data['birth'])
+        if user_id == None:
+            raise ValueError(f"User ID not found:\nUsername: {data['name']}\nUser BDay: {data['birth']}")
+    except ValueError as e:
+        print(e)
+        return abort(404, 'Not Found: User ID not found')
 
-    except AssertionError:
-        print("User not found")
-        return abort(400, 'Bad Request: User not found')
-
-        # (condition.condition_diagnosis)
-        # dialogue_code, message = res.condition_diagnosis.greeting()
-        # sess.session_update_dialogue(userid,dialogue_code)
-        # line_bot_api.push_message(userid, message)
-
-    if len(userid) > 1:
-        print("Multiple users detected")
-        return abort(418, "There are more than one tea drinkers")
-
-    userid = userid[0][0]
+    user_id = user_id[0][0]
     stat = 's1s0'
-    session.switch_status(userid, stat)
-    responder.high_temp_resp(userid, session, socketio)
+    session.switch_status(user_id, stat)
+    responder.high_temp_resp(user_id, socketio)
     return "OK"
 
 @app.route("/event_push_news")
 def push_news():
     users = session.get_users()
-    for userid in users:
-        print(f'User: {userid}')
+    for user_id in users:
+        print(f'User: {user_id}')
         stat = 's2s0'
-        session.switch_status(userid, stat)
-        responder.push_news_resp(userid)
+        session.switch_status(user_id, stat)
+        responder.push_news_resp(user_id)
     pass
 
 #########################
@@ -145,12 +137,12 @@ def get_user():
     users = db.get_users()
     temp = []
 
-    for userid, username in users:
+    for user_id, username in users:
         temp.append({
-            "user_id": userid,
+            "user_id": user_id,
             "user_name": username,
-            "last_content": session.status[userid]["last_msg"],
-            "timestamp": session.status[userid]["sess_time"],
+            "last_content": session.status[user_id]["last_msg"],
+            "timestamp": session.status[user_id]["sess_time"],
         })
 
     response = flask.Response(str(temp))
@@ -174,15 +166,6 @@ def get_old_msgs():
             timestamp,
         }]
     '''
-    # try:
-    #     data = request.get_json(force=True)
-    # except:
-    #     return abort(400, 'Bad Request: Error parsing to `json` format')
-    # try:
-    #     token = data["auth_token"]
-    #     assert(auth_valid(token))
-    # except:
-    #     return abort(403, 'Forbidden: Authentication is bad')
 
     data = request.get_json(force=True)
     try:
@@ -191,11 +174,11 @@ def get_old_msgs():
     except:
         return abort(403, "Forbidden: Authentication is bad")
 
-    userid = data["user_id"]
+    user_id = data["user_id"]
     offset = data["timestamp_offset"]
     max_amount = data["max_amount"]
 
-    messages = db.get_messages(userid)
+    messages = db.get_messages(user_id)
     filtered = []
 
     # Get offset time (-1 == now)
@@ -218,7 +201,7 @@ def get_old_msgs():
         for count in range(max_amount):
             temp.append({
                 "msg_id": filtered[count][0],
-                "user_id": userid,
+                "user_id": user_id,
                 "user_name":  session.status[filtered[count][1]]["user_name"],
                 "content": filtered[count][2],
                 "direction": filtered[count][3],
@@ -250,26 +233,26 @@ def send_msg():
     except:
         return abort(403, 'Forbidden: Authentication is bad')
 
-    userid = data["user_id"]
+    user_id = data["user_id"]
     message = data["message"]
 
     try:
         message = TextSendMessage(text=message)
-        line_bot_api.push_message(userid, message)
+        line_bot_api.push_message(user_id, message)
     except:
         return abort(400, "Bad request: invalid message")
 
-    json = {
-        "user_name": session.status[userid]["user_name"],
-        "user_id": userid,
+    frontend_data = {
+        "user_name": session.status[user_id]["user_name"],
+        "user_id": user_id,
         "content": data["message"],
         "direction": 1,
     }
 
-    db.log(userid, message, direction=1)
+    db.log(user_id, data["message"], direction=1)
 
     print(f"SOCKET: Sending to Front-End\n{data['message']}")
-    socketio.emit('Message', json, json=True, broadcast=True)
+    socketio.emit('Message', frontend_data, json=True, broadcast=True)
     print("SOCKET: Emitted to Front-End")
 
     response = flask.Response("OK")
@@ -349,47 +332,6 @@ def get_auths():
     with open(path, "rb") as f:
         pickle.load(f)
 
-# def message_callback(userid):
-#     # Get offset time (-1 == now)
-#     if offset == -1:
-#         offset = datetime.datetime.now()
-#     elif type(offset) is str:
-#         offset = datetime.datetime# .strptime(offset, "%Y-%m-%d %H:%M:%S")
-
-#     # Filter messages that are > timestamp
-#     for message in messages:
-#         message = list(message)
-#         message[4] = datetime.datetime# .strptime(message[4], "%Y-%m-%d %H:%M:%S")
-#         if message[4] < offset:
-#             filtered.append(message)
-
-#     temp = []
-
-#     if len(filtered) >= max_amount:
-#         for count in range(max_amount):
-#             print(filtered[count][2])
-#             temp.append({
-#                 "msg_id": filtered[count][0],
-#                 "user_name":  session.status[filtered[count][1]]["user_name"],
-#                 "content": filtered[count][2],
-#                 "direction": filtered[count][3],
-#                 "timestamp": filtered[count][4]# .strftime("%Y-%m-%d %H:%M:%S"),
-#             })
-#     else:
-#         for message in filtered:
-#             print(message[2])
-#             temp.append({
-#                 "msg_id": message[0],
-#                 "user_name":  session.status[message[1]]["user_name"],
-#                 "content": message[2],
-#                 "direction": message[3],
-#                 "timestamp": message[4]# .strftime("%Y-%m-%d %H:%M:%S"),
-#             })
-
-#     response = flask.Response(str(temp))
-#     response.headers['Access-Control-Allow-Origin'] = '*'
-#     return response
-
 #########################
 # socket connection
 #########################
@@ -424,62 +366,66 @@ def handle_message(event):
     # print(event)
 
     # Retreive user metadata
-    userid = event.source.user_id
-    usermsg = event.message.text
-    time = datetime.datetime.now()
-    # time = time.strftime("%Y-%m-%d %H:%M:%S")
-    # print("\n"+time)
+    user_id = event.source.user_id
+    user_msg = event.message.text
+    # Converted from JavaScript milisecond to second
+    timestamp = event.timestamp/1000
+    direction = 0
 
     # TODO: check timeout
-    stat = session.get_status(userid)
+    status = db.get_status(user_id)
+
+    if status == None:
+        db.add_user(user_id)
+        status = db.get_status(user_id)
 
     # Log user metadata
-    print(f'\nUser: {userid}')
-    print(f'Message: {usermsg}')
-    print(f'Status: {stat}\n')
+    print(f'\nUser: {user_id}')
+    print(f'Message: {user_msg}')
+    print(f'Status: {status}\n')
 
-    json = {
-        "user_name": session.status[userid]["user_name"],
-        "user_id": userid,
-        "content": usermsg,
-        "direction": 0,
+    # For frontend
+    frontend_data = {
+        "user_name": db.get_user_name(user_id),
+        "user_id": user_id,
+        "content": user_msg,
+        "direction": direction,
     }
 
-    db.log(userid, usermsg, direction=0)
-
-    if stat not in ["r", "r0", "r1", "r2", "r_err"]:
-        print(f"SOCKET: Sending to Front-End\n{usermsg}")
-        socketio.emit('Message', json, json=True, broadcast=True)
-        print(f"SOCKET: Emitted to Front-End")
+    db.log(user_id, user_msg, direction, timestamp=timestamp)
 
     # User in registration
-    if stat in ["r", "r0", "r1", "r2", "r_err"]:
-        stat = e.registration(event, session)
-        responder.registration_resp(event, stat, session, socketio)
+    if status in ["r", "r0", "r1", "r2", "r_err"]:
+        status = e.registration(user_id, user_msg, status)
+        responder.registration_resp(event, status, socketio)
 
     # User in scenario 1
-    elif stat in ["s1s0", "s1s1", "s1d0", "s1d1", "s1d2", "s1d3", "s1d4", "s1d5", "s1d6", "s1s2", "s1s3", "s1s4"]:
+    elif status in ["s1s0", "s1s1", "s1d0", "s1d1", "s1d2", "s1d3", "s1d4", "s1d5", "s1d6", "s1s2", "s1s3", "s1s4"]:
         # Respond first then push...
-        stat = e.high_temp(event, session)
-        responder.high_temp_resp(userid, session, socketio, event)
+        status = e.high_temp(event, session)
+        responder.high_temp_resp(user_id, socketio, event)
 
     # TODO: User in scenario 2
-    elif stat in ["s2s1", "s2s2", "s2s3"]:
-        stat = e.push_news(userid, usermsg, session)
+    elif status in ["s2s1", "s2s2", "s2s3"]:
+        status = e.push_news(user_id, user_msg, session)
         responder.push_news_resp(event, session)
 
     # User trigger QA
-    elif usermsg == '/qa':
-        stat = 'qa0'
-        session.switch_status(userid, stat)
-        responder.qa_resp(event, session, socketio)
+    elif user_msg == '/qa':
+        status = 'qa0'
+        session.switch_status(user_id, status)
+        responder.qa_resp(event, socketio)
 
-    elif stat in ["qa0", "qa1", "qa2_t", "qa2_f", "qa3"]:
-        stat = e.qa(event, session)
-        responder.qa_resp(event, session, socketio)
+    elif status in ["qa0", "qa1", "qa2_t", "qa2_f", "qa3"]:
+        status = e.qa(event, session)
+        responder.qa_resp(event, socketio)
 
-    session.status[userid]["last_msg"] = usermsg
-    session.status[userid]["sess_time"] = time.timestamp()
+    print(f"SOCKET: Sending to Front-End\n{user_msg}")
+    socketio.emit('Message', frontend_data, json=True, broadcast=True)
+    print(f"SOCKET: Emitted to Front-End")
+
+    session.status[user_id]["last_msg"] = user_msg
+    session.status[user_id]["sess_time"] = timestamp
 
     '''
     (DEPRECATED) User in chat state (currently unable to communicate)
@@ -489,7 +435,7 @@ def handle_message(event):
     #         event.reply_token,
     #         TextSendMessage(text="不好意思，我還不會講話...")
     #     )
-    #     db.log(userid, "不好意思，我還不會講話...", direction=1)
+    #     db.log(user_id, "不好意思，我還不會講話...", direction=1)
 
 # Sticker message handler (echo)
 '''
@@ -514,12 +460,12 @@ def handle_message(event):
 
 if __name__ == "__main__":
     # Load session
-    session.load_session()
+    # session.load_session()
 
     client_status = {}
 
     # Hook interrupt signal
-    signal.signal(signal.SIGINT, session.signal_handler)
+    # signal.signal(signal.SIGINT, session.signal_handler)
 
     # Setup host port
     port = int(os.environ.get('PORT', 8080))

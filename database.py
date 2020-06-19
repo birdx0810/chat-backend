@@ -13,14 +13,16 @@ from mysql.connector.errors import (
 import click
 
 # Import system modules
-import datetime, re
+from datetime import datetime 
+import re
 import json
 import os
 
 import utilities
+import environment
 
 # Is development or production
-config = utilities.get_config(utilities.environment.get_env())
+config = environment.get_config(environment.environment.get_env())
 
 # Connect to DB
 def connect():
@@ -39,26 +41,46 @@ def query(qry, var):
     '''
     Function for executing `SELECT * FROM table WHERE var0=foo, var1=bar`
     '''
+    rows = []
+
     try:
         conn = mariadb.connect(**config)
-        c = conn.cursor()
-        c.execute(qry, var)
-        rows = c.fetchall()
-        return rows
+        try:
+            c = conn.cursor()
+            c.execute(qry, var)
+            rows = c.fetchall()
+        except Exception as e:
+            print(e)
+        finally:
+            c.close()
     except Exception as e:
         print(e)
     finally:
-        c.close()
         conn.close()
+
+    if rows == []:
+        print("Query result is empty")
+
+    return rows
 
 def update(qry, var):
     '''
     Function for updating DB
     '''
+    is_success = False
     try:
         conn = mariadb.connect(**config)
-        c = conn.cursor()
-        c.execute(qry, var)
+        conn.autocommit = False
+        conn.start_transaction()
+        try:
+            c = conn.cursor()
+            c.execute(qry, var)
+            is_success = True
+        except mariadb.Error as e:
+            print(e)
+        finally:
+            c.close()
+    
     except mariadb.Error as e:
         conn.rollback()
         print(e)
@@ -66,140 +88,174 @@ def update(qry, var):
         conn.commit()
         print("Update successful")
     finally:
-        c.close()
         conn.close()
 
-def delete(conn, qry, var):
-    '''
-    Function for deleting row in DB
-    '''
-    c = conn.cursor()
-    c.execute(qry, var)
+    return is_success
 
 # Other functions
-def log(userid, message, direction):
+def log(user_id, message, direction, timestamp=None):
     '''
     Log user messages and the replies of bot to DB
     '''
-    qry = "INSERT INTO mb_logs (user_id, message, direction, timestamp) VALUES (%s, %s, %s, %s)"
-    time = datetime.datetime.now()
-    # time = time.strftime("%Y-%m-%d %H:%M:%S")
-    print(time)
-    update(qry, (userid, message, direction, time.timestamp()))
+    qry = """
+        INSERT INTO mb_logs (user_id, message, direction, timestamp) 
+        VALUES (%s, %s, %s, %s);
+    """
+    if timestamp == None:
+        timestamp = datetime.now().timestamp()
+    is_success = update(qry, (user_id, message, direction, timestamp))
+
+    #TODO: Error Notification
+
     if direction == 0:
         direction = "FROM"
     elif direction == 1:
         direction = "TO"
-    print(f"Message {direction} user {userid} saved to DB")
+    print(f"Message {direction} user {user_id} saved to DB")
 
 def get_users():
     '''
-    Gets the `line_id` and `user_name` for all users
+    Gets the `user_id` and `user_name` for all users
     '''
-    conn = mariadb.connect(**config)
-    qry = """SELECT line_id, user_name FROM mb_user"""
+    qry = """
+        SELECT user_id, user_name
+        FROM mb_user;
+    """
     result = query(qry, None)
+
     return result
 
-def get_messages(userid):
+def get_messages(user_id):
     '''
     Gets all messages from database
     '''
-    conn = mariadb.connect(**config)
-    qry = """SELECT * FROM mb_logs WHERE user_id=%s ORDER BY timestamp DESC"""
-    result = query(qry, (userid,))
+    qry = """
+        SELECT * 
+        FROM mb_logs 
+        WHERE user_id=%s 
+        ORDER BY timestamp DESC;
+    """
+    result = query(qry, (user_id,))
     return result
 
-def get_last_message(userid):
+def get_last_message(user_id):
     '''
     Get last message
     '''
-    conn = mariadb.connect(**config)
     qry = """
-    SELECT user_id, message
-    FROM mb_logs
-    WHERE user_id=%s
-    ORDER BY timestamp DESC
-    LIMIT 1
+        SELECT user_id, message
+        FROM mb_logs
+        WHERE user_id=%s
+        ORDER BY timestamp DESC
+        LIMIT 1;
     """
-    result = query(qry, (userid,))
-    # print(result)
-    if len(result) != 0:
-        return result[0]
-    else:
-        return result
+    result = query(qry, (user_id,))
 
-def check_user(name, birth, nric=None):
+    if result == []:
+        return None
+
+    return result[0]
+
+def get_user_id(name, birth, nric=None):
     '''
-    Get user line_id with `user_name` and `user_bday`
-    Returns matched line_id
+    Get user user_id with `user_name` and `user_bday`
+    Returns matched user_id
     '''
-    conn = mariadb.connect(**config)
-    qry = """SELECT line_id FROM mb_user WHERE user_name=%s and user_bday=%s"""
+    qry = """
+        SELECT user_id
+        FROM mb_user 
+        WHERE user_name=%s AND user_bday=%s
+        ORDER BY user_id ASC;
+    """
     result = query(qry, (name, birth))
-    return result
 
-def sync(session):
+    if result == []:
+        return None
+
+    # Known issue (more than one user)
+    return result[0]
+
+def get_user_name(user_id):
     '''
-    Sync session dictionary and DB
+    Get user user_id with `user_name` and `user_bday`
+    Returns matched user_id
     '''
-    # Get all user from DB
-    try:
-        conn = mariadb.connect(**config)
-        c = conn.cursor()
-        qry = "SELECT * FROM mb_user"
-        c.execute(qry)
-        result = c.fetchall()
-    except mariadb.Error as e:
-        print(e)
+    qry = """
+        SELECT user_name
+        FROM mb_user
+        WHERE user_id=%s;
+    """
+    result = query(qry, (user_id, ))
 
-    users = [r[0] for r in result]
-    messages = {}
+    if result == []:
+        return None
 
-    for user in users:
-        tmp = get_last_message(user)
-        # print(tmp)
-        messages[tmp[0]] = tmp[1]
+    return result[0]
 
-    # Get session dict
-    status = session.status
+def get_status(user_id):
+    qry = """
+    SELECT user_status
+    FROM mb_user
+    WHERE user_id=%s;
+    """
+    result = query(qry, (user_id,))
 
-    try:
-        # User absent in session
-        for res in result:
-            if res[0] not in status.keys():
-                session.status[res[0]] = {}
-                session.status[res[0]]["user_name"] = res[1]
-                session.status[res[0]]["user_bday"] = res[2]
-                session.status[res[0]]["last_msg"] = messages[res[0]]
-                session.status[res[0]]["sess_status"] = None
-                session.status[res[0]]["sess_time"] = datetime.datetime.now()# .strftime("%Y-%m-%d %H:%M:%S")
-            if session.status[res[0]]["user_name"] == None:
-                session.status[res[0]]["user_name"] = res[1]
-            if session.status[res[0]]["user_bday"] == None:
-                session.status[res[0]]["user_bday"] = res[2]
-            if session.status[res[0]]["last_msg"] == None:
-                session.status[res[0]]["last_msg"] = messages[res[0]]
-            if session.status[res[0]]["sess_status"] in ["r", "r0", "r1", "r2", "r_err"]:
-                session.status[res[0]]["sess_status"] = None
-            session.status[res[0]]["sess_time"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            session.save_session()
+    if result == []:
+        return None
 
-        # User absent in DB
-        for userid in status.keys():
-            if userid not in users:
-                qry = """INSERT INTO mb_user (line_id, user_name, user_bday) VALUES (%s, %s, %s)"""
-                var = (userid, status[userid]["user_name"], status[userid]["user_bday"])
-                update(qry, var)
-        print(f"Done syncing {len(status)} user records")
+    return result[0]
 
-    except:
-        print("An error has occured while syncing")
+def add_user(user_id):
+    qry = """
+        INSERT INTO mb_user (user_id)
+        VALUES (%s);
+    """
 
+    is_success = update(qry, (user_id,))
+
+    #TODO: Error Notification
+
+def update_status(user_id, status):
+    qry = """
+        UPDATE mb_user
+        SET user_status=%s
+        WHERE user_id=%s;
+    """
+
+    is_success = update(qry, (status, user_id))
+
+    #TODO: Error Notification
+
+    return get_status(user_id)
+
+def update_user_name(user_id, user_name):
+    qry = """
+        UPDATE mb_user
+        SET user_name=%s
+        WHERE user_id=%s;
+    """
+
+    is_success = update(qry, (user_name, user_id))
+
+    # TODO: Error Notification
+
+def update_user_bday(user_id, user_bday):
+    qry = """
+        UPDATE mb_user
+        SET user_bday=%s
+        WHERE user_id=%s;
+    """
+
+    is_success = update(qry, (user_bday, user_id))
+
+    # TODO: Error Notification
 
 def get_admin():
     conn = mariadb.connect(**config)
-    qry = """SELECT * FROM mb_admin"""
+    qry = """
+        SELECT * 
+        FROM mb_admin;
+    """
     result = query(qry, None)
     return result
 

@@ -6,6 +6,7 @@ import os
 import signal
 import sys
 import database as db
+import json
 
 class Log():
     def __init__(self):
@@ -17,29 +18,6 @@ class Log():
         Gracefully shutdown and close handlers
         '''
         logging.shutdown()
-
-    # TODO: Setup program logger
-    '''
-    logging.basicConfig(
-        level=logging.DEBUG
-        format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s'
-        datefmt='%Y-%m-%d %H-%M-%s'
-        filename='./logs/app.log'
-        filemode='a'
-    )
-    logger = logging.getLogger()
-
-    # Log process id
-    _pid = os.getpid()
-    with open('./logs/service.pid', 'w') as f:
-        f.write(str(_pid))
-        f.close()
-
-    # Log sysout
-    syslog = os.fdopen('./log/app.log', 'a', 0)
-    sys.stdout = syslog
-    sys.stderr = syslog
-    '''
 
 class Session():
     def __init__(self):
@@ -60,7 +38,7 @@ class Session():
         Saves the session state when process is killed
         '''
         print(f'\nPressed Ctrl+C')
-        db.sync(self)
+        # db.sync(self)
         self.save_session()
         sys.exit(0)
 
@@ -86,39 +64,46 @@ class Session():
         else:
             print(f"\n{self.highlight}No session file found. Using a new session.\n{self.highlight}")
 
-    def add_status(self, userid):
+    def add_status(self, user_id):
         '''
         Add new user to dict.
         '''
-        self.status[userid] = {}
-        self.status[userid]["user_name"] = None
-        self.status[userid]["user_bday"] = None
-        self.status[userid]["last_msg"] = None
-        self.status[userid]["sess_status"] = 'r'
-        self.status[userid]["sess_time"] = datetime.now().timestamp() # .strftime("%Y-%m-%d %H:%M:%S")
-        print(f'New user: {userid}')
+        self.status[user_id] = {}
+        self.status[user_id]["user_name"] = None
+        self.status[user_id]["user_bday"] = None
+        self.status[user_id]["last_msg"] = None
+        self.status[user_id]["sess_status"] = 'r'
+        self.status[user_id]["sess_time"] = datetime.now().timestamp() # .strftime("%Y-%m-%d %H:%M:%S")
+        print(f'New user: {user_id}')
 
-    def get_status(self, userid):
+    def get_status(self, user_id):
         '''
         Checks the status of the user
         If user not found, add user to dict and return `status = 'r0'` to trigger registration
         Returns a status. Do not use to trigger any other function!!!
         '''
         try:
-            stat = self.status[userid]["sess_status"]
+            stat = self.status[user_id]["sess_status"]
             return stat
         except:
-            self.add_status(userid)
-            stat = self.status[userid]["sess_status"]
+            self.add_status(user_id)
+            stat = self.status[user_id]["sess_status"]
             return stat
 
-    def switch_status(self, userid, status):
+    def get_user_name(self, user_id):
+        '''
+        Get user name 
+        '''
+        return self.status[user_id]["user_name"]
+
+
+    def switch_status(self, user_id, status):
         '''
         Switch user status and log time
         '''
-        self.status[userid]["sess_status"] = status
-        self.status[userid]["sess_time"] = datetime.now().timestamp()# .strftime("%Y-%m-%d %H:%M:%S")
-        print(f'User {userid} status update `{status}` @ {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}')
+        self.status[user_id]["sess_status"] = status
+        self.status[user_id]["sess_time"] = datetime.now().timestamp()# .strftime("%Y-%m-%d %H:%M:%S")
+        print(f'User {user_id} status update `{status}` @ {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}')
 
     def get_users(self):
         '''
@@ -129,74 +114,6 @@ class Session():
             users.append(user)
         return users
 
-def get_key(env):
-    '''
-    Get API and webhook key for given environment
-    '''
-    if env == "development":
-        path = os.path.abspath(
-            f"{os.path.abspath(__file__)}/../key/development"
-        )
-    elif env == "production":
-        path = os.path.abspath(
-            f"{os.path.abspath(__file__)}/../key/production"
-        )
-    else:
-        raise ValueError("Invalid `env`, must be `development` or `production`")
-
-    if not os.path.exists(path):
-        raise FileNotFoundError(f"{path} does not exist")
-
-    with open(path, "r") as f:
-        keys = [line.strip() for line in f.readlines()]
-    
-    return keys
-
-def get_config(env):
-    '''
-    Get database config file
-    '''
-    if env == "development":
-        path = os.path.abspath(
-            f"{os.path.abspath(__file__)}/../config/development.json"
-        )
-    elif env == "production":
-        path = os.path.abspath(
-            f"{os.path.abspath(__file__)}/../config/production.json"
-        )
-    else:
-        raise ValueError("Invalid `env`, must be `development` or `production`")
-    
-    if not os.path.exists(path):
-        raise FileNotFoundError(f"{path} does not exist")
-
-    with open(path, "r") as f:
-        keys = [line.strip() for line in f.readlines()]
-    
-    return keys
-
-class __Environment():
-    def __init__(self, env):
-        self.env = env
-        self.freeze = False
-
-    def lock(self):
-        self.freeze = True
-
-    def set_env(self, env):
-        if self.freeze:
-            raise ValueError('Try to update environment')
-        self.env = env
-
-    def get_env(self):
-        return self.env
-
-    def is_development(self):
-        return self.get_env() == 'development'
-
-environment = __Environment('development')
-
 # Unit test for log or session
 if __name__ == "__main__":
-    key = get_key("production")
-    print(key)
+    pass
