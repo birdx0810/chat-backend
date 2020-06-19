@@ -22,7 +22,11 @@ from linebot.models import (
 )
 
 # Import system modules
-import datetime, logging, signal, sys, os
+import datetime
+import logging
+import signal
+import sys
+import os
 import hashlib
 import json
 import random
@@ -33,7 +37,8 @@ import pickle
 import database as db
 import event as e
 import templates as t
-import utilities, responder
+import utilities
+import responder
 import environment
 
 ##############################
@@ -61,6 +66,8 @@ session = utilities.Session()
 # Chatbot API
 ##############################
 # Listen to all POST requests from HOST/callback
+
+
 @app.route("/callback", methods=['POST'])
 def callback():
     # get X-Line-Signature header value
@@ -78,6 +85,8 @@ def callback():
 
 # API for triggering event.high_temp case
 # Accepts a json file with line_id and
+
+
 @app.route('/event_high_temp', methods=['POST'])
 def high_temp():
     if request.headers['Content-Type'] != 'application/json':
@@ -88,9 +97,12 @@ def high_temp():
         data = request.json
         user_id = db.get_user_id(data['name'], data['birth'])
         if user_id == None:
-            raise ValueError(f"User ID not found:\nUsername: {data['name']}\nUser BDay: {data['birth']}")
+            raise ValueError(
+                f"User ID not found:\nUsername: {data['name']}\nUser BDay: {data['birth']}")
     except ValueError as e:
-        print(e)
+        traceback.format_exc()
+
+        print(traceback.format_exc())
         return abort(404, 'Not Found: User ID not found')
 
     user_id = user_id[0][0]
@@ -98,6 +110,7 @@ def high_temp():
     session.switch_status(user_id, stat)
     responder.high_temp_resp(user_id, socketio)
     return "OK"
+
 
 @app.route("/event_push_news")
 def push_news():
@@ -113,6 +126,7 @@ def push_news():
 # Frontend API
 #########################
 
+
 @app.route("/users", methods=['POST'])
 # @cross_origin(origin='*',headers=['Content-Type','Authorization'])
 def get_user():
@@ -126,7 +140,7 @@ def get_user():
             timestamp,        //最後一個訊息的時間
         }]
     '''
-    #TODO: Verify request from frontend (Call function)
+    # TODO: Verify request from frontend (Call function)
     try:
         data = request.get_json(force=True)
         token = data["auth_token"]
@@ -148,6 +162,7 @@ def get_user():
     response = flask.Response(str(temp))
     response.headers['Access-Control-Allow-Origin'] = '*'
     return response
+
 
 @app.route("/messages", methods=['POST'])
 def get_old_msgs():
@@ -221,6 +236,7 @@ def get_old_msgs():
     response.headers['Access-Control-Allow-Origin'] = '*'
     return response
 
+
 @app.route("/send", methods=['POST'])
 def send_msg():
     try:
@@ -259,12 +275,14 @@ def send_msg():
     response.headers['Access-Control-Allow-Origin'] = '*'
     return response
 
+
 @app.route("/broadcast", methods=['POST'])
 def broadcast_msg():
     users = db.get_users()
     for user in users:
         # send_msg()
         pass
+
 
 @app.route("/login", methods=['POST'])
 def log_in():
@@ -281,7 +299,8 @@ def log_in():
         if res[1] == psw:
             success = True
             break
-        else: success = False
+        else:
+            success = False
 
     if success == True:
         token = find_token_of_admin(username)
@@ -299,19 +318,24 @@ def log_in():
 # Authentication variables and functions
 #########################
 
+
 auths = {}
+
 
 def generate_token(username):
     size = 15
-    token = ''.join(random.choices(string.ascii_uppercase + string.digits, k=size))
+    token = ''.join(random.choices(
+        string.ascii_uppercase + string.digits, k=size))
     auths[token] = username
     return token
 
+
 def find_token_of_admin(username):
     for token, value in auths.items():
-            if value == username:
-                return token
+        if value == username:
+            return token
     return None
+
 
 def auth_valid(token):
     if len(auths.keys()) > 0:
@@ -322,10 +346,13 @@ def auth_valid(token):
         return False
 
 # TODO: Save when signal interrupted
+
+
 def save_auths():
     path = "session/admin.pickle"
     with open(path, "wb") as f:
         pickle.dump(auths, f)
+
 
 def get_auths():
     path = "session/admin.pickle"
@@ -335,6 +362,7 @@ def get_auths():
 #########################
 # socket connection
 #########################
+
 
 @socketio.on('connect', namespace="/")
 def handle_connection():
@@ -347,9 +375,11 @@ def handle_connection():
     socketio.emit('Response', {"data": "OK"}, broadcast=True)
     print('SOCKET: Emitted')
 
+
 @socketio.on_error()
 def error_handler_chat(e):
     print(e)
+
 
 
 ##############################
@@ -370,7 +400,6 @@ def handle_message(event):
     user_msg = event.message.text
     # Converted from JavaScript milisecond to second
     timestamp = event.timestamp/1000
-    direction = 0
 
     # TODO: check timeout
     status = db.get_status(user_id)
@@ -384,20 +413,26 @@ def handle_message(event):
     print(f'Message: {user_msg}')
     print(f'Status: {status}\n')
 
-    # For frontend
-    frontend_data = {
-        "user_name": db.get_user_name(user_id),
-        "user_id": user_id,
-        "content": user_msg,
-        "direction": direction,
-    }
+    # Send user message to frontend
+    responder.send_frontend(user_id, user_msg, socketio=socketio, direction=0)
 
-    db.log(user_id, user_msg, direction, timestamp=timestamp)
+    # Log user message to database
+    db.log(user_id, user_msg, direction=0, timestamp=timestamp)
 
     # User in registration
-    if status in ["r", "r0", "r1", "r2", "r_err"]:
+    if status in ["r", "r0", "r1", "r_err"]:
         status = e.registration(user_id, user_msg, status)
         responder.registration_resp(event, status, socketio)
+
+    # User trigger QA
+    elif status == "s" and user_msg == '/qa':
+        status = "qa0"
+        db.update_status(user_id, status)
+        responder.qa_resp(event, status, socketio)
+
+    elif status in ["qa0", "qa1", "qa2_f"]:
+        status = e.qa(event, status)
+        responder.qa_resp(event, status, socketio)
 
     # User in scenario 1
     elif status in ["s1s0", "s1s1", "s1d0", "s1d1", "s1d2", "s1d3", "s1d4", "s1d5", "s1d6", "s1s2", "s1s3", "s1s4"]:
@@ -410,23 +445,6 @@ def handle_message(event):
         status = e.push_news(user_id, user_msg, session)
         responder.push_news_resp(event, session)
 
-    # User trigger QA
-    elif user_msg == '/qa':
-        status = 'qa0'
-        session.switch_status(user_id, status)
-        responder.qa_resp(event, socketio)
-
-    elif status in ["qa0", "qa1", "qa2_t", "qa2_f", "qa3"]:
-        status = e.qa(event, session)
-        responder.qa_resp(event, socketio)
-
-    print(f"SOCKET: Sending to Front-End\n{user_msg}")
-    socketio.emit('Message', frontend_data, json=True, broadcast=True)
-    print(f"SOCKET: Emitted to Front-End")
-
-    session.status[user_id]["last_msg"] = user_msg
-    session.status[user_id]["sess_time"] = timestamp
-
     '''
     (DEPRECATED) User in chat state (currently unable to communicate)
     '''
@@ -437,10 +455,13 @@ def handle_message(event):
     #     )
     #     db.log(user_id, "不好意思，我還不會講話...", direction=1)
 
+
 # Sticker message handler (echo)
 '''
 Stickers should not affect user status
 '''
+
+
 @handler.add(MessageEvent, message=StickerMessage)
 def handle_message(event):
     # Retrieve message metadata
@@ -450,13 +471,14 @@ def handle_message(event):
 
     line_bot_api.reply_message(
         event.reply_token,
-        StickerMessage(id=id,sticker_id=sticker_id,package_id=package_id)
+        StickerMessage(id=id, sticker_id=sticker_id, package_id=package_id)
     )
     pass
 
 ##############################
 # Main function
 ##############################
+
 
 if __name__ == "__main__":
     # Load session
@@ -477,9 +499,9 @@ if __name__ == "__main__":
     #     time = datetime.datetime.now().strftime("%H:%M")
     #     if time == "00:00":
     #         db.sync(session)
-        # if time == 20:00:
-            # TODO: Run news crawler
-            # got_news = crawl()
-        # if got_news:
-            # TODO: Call news API
-        # break
+    # if time == 20:00:
+    # TODO: Run news crawler
+    # got_news = crawl()
+    # if got_news:
+    # TODO: Call news API
+    # break

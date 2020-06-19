@@ -13,7 +13,7 @@ from mysql.connector.errors import (
 import click
 
 # Import system modules
-from datetime import datetime 
+from datetime import datetime
 import re
 import json
 import os
@@ -25,6 +25,8 @@ import environment
 config = environment.get_config(environment.environment.get_env())
 
 # Connect to DB
+
+
 def connect():
     '''
     Initialize the connection to DB
@@ -34,10 +36,42 @@ def connect():
         conn = mariadb.connect(**config)
     except mariadb.Error as e:
         print(e)
+        print(traceback.format_exc())
     return conn
 
 # Function factory
-def query(qry, var):
+
+
+def query_one(qry, var):
+    '''
+    Function for executing `SELECT * FROM table WHERE var0=foo, var1=bar`
+    '''
+    rows = None
+
+    try:
+        conn = mariadb.connect(**config)
+        try:
+            c = conn.cursor(dictionary=True)
+            c.execute(qry, var)
+            rows = c.fetchone()
+        except Exception as e:
+            print(e)
+            print(traceback.format_exc())
+        finally:
+            c.close()
+    except Exception as e:
+        print(e)
+        print(traceback.format_exc())
+    finally:
+        conn.close()
+
+    if rows == None:
+        print("Query result is empty")
+
+    return rows
+
+
+def query_all(qry, var):
     '''
     Function for executing `SELECT * FROM table WHERE var0=foo, var1=bar`
     '''
@@ -46,15 +80,17 @@ def query(qry, var):
     try:
         conn = mariadb.connect(**config)
         try:
-            c = conn.cursor()
+            c = conn.cursor(dictionary=True)
             c.execute(qry, var)
             rows = c.fetchall()
         except Exception as e:
             print(e)
+            print(traceback.format_exc())
         finally:
             c.close()
     except Exception as e:
         print(e)
+        print(traceback.format_exc())
     finally:
         conn.close()
 
@@ -62,6 +98,7 @@ def query(qry, var):
         print("Query result is empty")
 
     return rows
+
 
 def update(qry, var):
     '''
@@ -78,12 +115,14 @@ def update(qry, var):
             is_success = True
         except mariadb.Error as e:
             print(e)
+            print(traceback.format_exc())
         finally:
             c.close()
-    
+
     except mariadb.Error as e:
         conn.rollback()
         print(e)
+        print(traceback.format_exc())
     else:
         conn.commit()
         print("Update successful")
@@ -93,6 +132,8 @@ def update(qry, var):
     return is_success
 
 # Other functions
+
+
 def log(user_id, message, direction, timestamp=None):
     '''
     Log user messages and the replies of bot to DB
@@ -105,13 +146,14 @@ def log(user_id, message, direction, timestamp=None):
         timestamp = datetime.now().timestamp()
     is_success = update(qry, (user_id, message, direction, timestamp))
 
-    #TODO: Error Notification
+    # TODO: Error Notification
 
     if direction == 0:
         direction = "FROM"
     elif direction == 1:
         direction = "TO"
     print(f"Message {direction} user {user_id} saved to DB")
+
 
 def get_users():
     '''
@@ -121,9 +163,10 @@ def get_users():
         SELECT user_id, user_name
         FROM mb_user;
     """
-    result = query(qry, None)
+    result = query_all(qry, None)
 
     return result
+
 
 def get_messages(user_id):
     '''
@@ -135,8 +178,9 @@ def get_messages(user_id):
         WHERE user_id=%s 
         ORDER BY timestamp DESC;
     """
-    result = query(qry, (user_id,))
+    result = query_all(qry, (user_id,))
     return result
+
 
 def get_last_message(user_id):
     '''
@@ -149,12 +193,13 @@ def get_last_message(user_id):
         ORDER BY timestamp DESC
         LIMIT 1;
     """
-    result = query(qry, (user_id,))
+    result = query_one(qry, (user_id,))
 
-    if result == []:
+    if result == None:
         return None
 
-    return result[0]
+    return result["message"]
+
 
 def get_user_id(name, birth, nric=None):
     '''
@@ -167,30 +212,32 @@ def get_user_id(name, birth, nric=None):
         WHERE user_name=%s AND user_bday=%s
         ORDER BY user_id ASC;
     """
-    result = query(qry, (name, birth))
+    result = query_one(qry, (name, birth))
 
-    if result == []:
+    if result == None:
         return None
 
     # Known issue (more than one user)
-    return result[0]
+    return result["user_id"]
+
 
 def get_user_name(user_id):
     '''
-    Get user user_id with `user_name` and `user_bday`
-    Returns matched user_id
+    Get user `user_name` with `user_id`
+    Returns matched `user_name`
     '''
     qry = """
         SELECT user_name
         FROM mb_user
         WHERE user_id=%s;
     """
-    result = query(qry, (user_id, ))
+    result = query_one(qry, (user_id, ))
 
-    if result == []:
+    if result == None:
         return None
 
-    return result[0]
+    return result["user_name"]
+
 
 def get_status(user_id):
     qry = """
@@ -198,12 +245,13 @@ def get_status(user_id):
     FROM mb_user
     WHERE user_id=%s;
     """
-    result = query(qry, (user_id,))
+    result = query_one(qry, (user_id,))
 
-    if result == []:
+    if result == None:
         return None
 
-    return result[0]
+    return result["user_status"]
+
 
 def add_user(user_id):
     qry = """
@@ -213,7 +261,8 @@ def add_user(user_id):
 
     is_success = update(qry, (user_id,))
 
-    #TODO: Error Notification
+    # TODO: Error Notification
+
 
 def update_status(user_id, status):
     qry = """
@@ -224,14 +273,15 @@ def update_status(user_id, status):
 
     is_success = update(qry, (status, user_id))
 
-    #TODO: Error Notification
+    # TODO: Error Notification
 
     return get_status(user_id)
+
 
 def update_user_name(user_id, user_name):
     qry = """
         UPDATE mb_user
-        SET user_name=%s
+        SET user_name=%s, user_status='r1'
         WHERE user_id=%s;
     """
 
@@ -239,10 +289,11 @@ def update_user_name(user_id, user_name):
 
     # TODO: Error Notification
 
+
 def update_user_bday(user_id, user_bday):
     qry = """
         UPDATE mb_user
-        SET user_bday=%s
+        SET user_bday=%s, user_status='r2'
         WHERE user_id=%s;
     """
 
@@ -250,14 +301,20 @@ def update_user_bday(user_id, user_bday):
 
     # TODO: Error Notification
 
+
 def get_admin():
     conn = mariadb.connect(**config)
     qry = """
-        SELECT * 
+        SELECT admin_name, admin_pass
         FROM mb_admin;
     """
-    result = query(qry, None)
+    result = query_one(qry, None)
+
+    if result == None:
+        return None
+
     return result
+
 
 # Unit test for database
 if __name__ == "__main__":

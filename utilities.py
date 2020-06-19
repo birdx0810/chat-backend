@@ -8,6 +8,7 @@ import sys
 import database as db
 import json
 
+
 class Log():
     def __init__(self):
         # Log file path
@@ -18,6 +19,7 @@ class Log():
         Gracefully shutdown and close handlers
         '''
         logging.shutdown()
+
 
 class Session():
     def __init__(self):
@@ -51,7 +53,8 @@ class Session():
 
         with open(self.path, 'wb') as f:
             pickle.dump(self.status, f)
-        print(f"\n{self.highlight}Saved session to \"{self.path}\"\n{self.highlight}")
+        print(
+            f"\n{self.highlight}Saved session to \"{self.path}\"\n{self.highlight}")
 
     def load_session(self):
         '''
@@ -60,9 +63,11 @@ class Session():
         if os.path.exists(self.path):
             with open(self.path, 'rb') as f:
                 self.status = pickle.load(f)
-            print(f"\n{self.highlight}Retrieved session file with {len(self.status)} users\n{self.highlight}")
+            print(
+                f"\n{self.highlight}Retrieved session file with {len(self.status)} users\n{self.highlight}")
         else:
-            print(f"\n{self.highlight}No session file found. Using a new session.\n{self.highlight}")
+            print(
+                f"\n{self.highlight}No session file found. Using a new session.\n{self.highlight}")
 
     def add_status(self, user_id):
         '''
@@ -73,7 +78,8 @@ class Session():
         self.status[user_id]["user_bday"] = None
         self.status[user_id]["last_msg"] = None
         self.status[user_id]["sess_status"] = 'r'
-        self.status[user_id]["sess_time"] = datetime.now().timestamp() # .strftime("%Y-%m-%d %H:%M:%S")
+        self.status[user_id]["sess_time"] = datetime.now(
+        ).timestamp()  # .strftime("%Y-%m-%d %H:%M:%S")
         print(f'New user: {user_id}')
 
     def get_status(self, user_id):
@@ -96,14 +102,15 @@ class Session():
         '''
         return self.status[user_id]["user_name"]
 
-
     def switch_status(self, user_id, status):
         '''
         Switch user status and log time
         '''
         self.status[user_id]["sess_status"] = status
-        self.status[user_id]["sess_time"] = datetime.now().timestamp()# .strftime("%Y-%m-%d %H:%M:%S")
-        print(f'User {user_id} status update `{status}` @ {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}')
+        self.status[user_id]["sess_time"] = datetime.now(
+        ).timestamp()  # .strftime("%Y-%m-%d %H:%M:%S")
+        print(
+            f'User {user_id} status update `{status}` @ {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}')
 
     def get_users(self):
         '''
@@ -113,6 +120,7 @@ class Session():
         for user in self.status:
             users.append(user)
         return users
+
 
 # Unit test for log or session
 if __name__ == "__main__":

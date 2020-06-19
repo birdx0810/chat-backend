@@ -8,15 +8,17 @@ import json
 from bs4 import BeautifulSoup
 import random
 
+
 def transformAddress(address, GOOGLE_API_KEY):
 
-    addurl = 'https://maps.googleapis.com/maps/api/geocode/json?key={}&address={}&sensor=false'.format(GOOGLE_API_KEY,address)
+    addurl = 'https://maps.googleapis.com/maps/api/geocode/json?key={}&address={}&sensor=false'.format(
+        GOOGLE_API_KEY, address)
     # 經緯度轉換
     addressReq = requests.get(addurl)
     addressDoc = addressReq.json()
     lat = addressDoc['results'][0]['geometry']['location']['lat']
     lng = addressDoc['results'][0]['geometry']['location']['lng']
-    return  lat, lng
+    return lat, lng
 
 
 def content(clinic):
@@ -26,23 +28,26 @@ def content(clinic):
     address = "沒有資料" if clinic.get("vicinity") is None else clinic["vicinity"]
     details = "Google Map評分：{}\n地址：{}".format(rating, address)
     hospital.append(clinic.get("name"))
-    hospital.append(details.replace('\n',', '))
+    hospital.append(details.replace('\n', ', '))
 
     # 取得医院的 Google map 網址
-    mapUrl = "https://www.google.com/maps/search/?api=1&query={lat},{long}&query_place_id={place_id}".format(lat=clinic["geometry"]["location"]["lat"],long=clinic["geometry"]["location"]["lng"],place_id=clinic["place_id"])
+    mapUrl = "https://www.google.com/maps/search/?api=1&query={lat},{long}&query_place_id={place_id}".format(
+        lat=clinic["geometry"]["location"]["lat"], long=clinic["geometry"]["location"]["lng"], place_id=clinic["place_id"])
     hospital.append(mapUrl)
     return hospital
 
-def searchHospital(lat, lng, kw, GOOGLE_API_KEY ,searchtype):
+
+def searchHospital(lat, lng, kw, GOOGLE_API_KEY, searchtype):
     # 取得附近医院資訊
-    clinicSearch = "https://maps.googleapis.com/maps/api/place/nearbysearch/json?key={}&location={},{}&rankby=distance&type={}&keyword={}&language=zh-TW".format(GOOGLE_API_KEY, lat, lng, searchtype, kw)
+    clinicSearch = "https://maps.googleapis.com/maps/api/place/nearbysearch/json?key={}&location={},{}&rankby=distance&type={}&keyword={}&language=zh-TW".format(
+        GOOGLE_API_KEY, lat, lng, searchtype, kw)
 
     clinicReq = requests.get(clinicSearch)
     nearbyclinicReq_dict = clinicReq.json()
     top5clinicReq = nearbyclinicReq_dict["results"]
     res_num = (len(top5clinicReq))
     # 取評分高於3.9的医院
-    bravo=[]
+    bravo = []
     for i in range(res_num):
         try:
             if top5clinicReq[i]['rating'] > 3.9:
@@ -58,13 +63,16 @@ def searchHospital(lat, lng, kw, GOOGLE_API_KEY ,searchtype):
     return allhospital
 
 
-def get_hospitals(lat, lng, keyword, GOOGLE_API_KEY='AIzaSyBfl9pJ1nJJuoidn_WMIGxfUVtN9x2GHCE', searchtype = ''):
+def get_hospitals(lat, lng, keyword, GOOGLE_API_KEY='AIzaSyBfl9pJ1nJJuoidn_WMIGxfUVtN9x2GHCE', searchtype=''):
     # 经纬度，keyword，apikey，搜索类型例如hospital
-    allhospitals = searchHospital(lat, lng, keyword, GOOGLE_API_KEY, searchtype)
+    allhospitals = searchHospital(
+        lat, lng, keyword, GOOGLE_API_KEY, searchtype)
     return allhospitals[:5]
 
-def get_address(address, keyword, GOOGLE_API_KEY='AIzaSyBfl9pJ1nJJuoidn_WMIGxfUVtN9x2GHCE', searchtype = ''):
+
+def get_address(address, keyword, GOOGLE_API_KEY='AIzaSyBfl9pJ1nJJuoidn_WMIGxfUVtN9x2GHCE', searchtype=''):
     # 经纬度，keyword，apikey，搜索类型例如hospital
     lat, log = transformAddress(address, GOOGLE_API_KEY)
-    allhospitals = searchHospital(lat, log, keyword, GOOGLE_API_KEY ,searchtype)
+    allhospitals = searchHospital(
+        lat, log, keyword, GOOGLE_API_KEY, searchtype)
     return allhospitals[:5]
