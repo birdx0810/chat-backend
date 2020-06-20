@@ -48,6 +48,23 @@ def get_key(env):
 
     return keys
 
+def get_maps_key():
+    '''
+    Get Google Maps API key
+    '''
+    path = os.path.abspath(
+        f"{os.path.abspath(__file__)}/../key/google_maps"
+    )
+
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"{path} does not exist")
+
+    with open(path, "r") as f:
+        keys = f.read().strip()
+
+    return keys
+
+
 
 def get_config(env):
     '''

@@ -1,24 +1,11 @@
 # -*- coding: UTF-8 -*-
-# Import 3rd-party modules
-from flask import current_app, g
-from flask.cli import with_appcontext
-
-import mysql.connector as mariadb
-from mysql.connector.errors import (
-    DataError,
-    OperationalError,
-    ProgrammingError
-)
-
-import click
-
 # Import system modules
 from datetime import datetime
-import re
-import json
-import os
+import traceback
 
-import utilities
+# Import 3rd-party modules
+import mysql.connector as mariadb
+
 import environment
 
 # Is development or production
@@ -33,8 +20,8 @@ def connect():
     '''
     try:
         conn = mariadb.connect(**config)
-    except mariadb.Error as e:
-        print(e)
+    except mariadb.Error as err:
+        print(err)
         print(traceback.format_exc())
     return conn
 
@@ -53,18 +40,18 @@ def query_one(qry, var):
             c = conn.cursor(dictionary=True)
             c.execute(qry, var)
             rows = c.fetchone()
-        except Exception as e:
-            print(e)
+        except Exception as err:
+            print(err)
             print(traceback.format_exc())
         finally:
             c.close()
-    except Exception as e:
-        print(e)
+    except Exception as err:
+        print(err)
         print(traceback.format_exc())
     finally:
         conn.close()
 
-    if rows == None:
+    if rows is None:
         print("Query result is empty")
 
     return rows
@@ -82,13 +69,13 @@ def query_all(qry, var):
             c = conn.cursor(dictionary=True)
             c.execute(qry, var)
             rows = c.fetchall()
-        except Exception as e:
-            print(e)
+        except Exception as err:
+            print(err)
             print(traceback.format_exc())
         finally:
             c.close()
-    except Exception as e:
-        print(e)
+    except Exception as err:
+        print(err)
         print(traceback.format_exc())
     finally:
         conn.close()
@@ -112,15 +99,15 @@ def update(qry, var):
             c = conn.cursor()
             c.execute(qry, var)
             is_success = True
-        except mariadb.Error as e:
-            print(e)
+        except mariadb.Error as err:
+            print(err)
             print(traceback.format_exc())
         finally:
             c.close()
 
-    except mariadb.Error as e:
+    except mariadb.Error as err:
         conn.rollback()
-        print(e)
+        print(err)
         print(traceback.format_exc())
     else:
         conn.commit()
@@ -141,9 +128,9 @@ def log(direction=None, message=None, timestamp=None, user_id=None):
         INSERT INTO mb_logs (user_id, message, direction, timestamp) 
         VALUES (%s, %s, %s, %s);
     """
-    if timestamp == None:
+    if timestamp is None:
         timestamp = datetime.now().timestamp()
-    is_success = update(qry, (user_id, message, direction, timestamp))
+    update(qry, (user_id, message, direction, timestamp))
 
     # TODO: Error Notification
 
@@ -187,7 +174,7 @@ def get_last_message(user_id=None):
     Get last message
     '''
     qry = """
-        SELECT user_id, message
+        SELECT user_id, message, timestamp
         FROM mb_logs
         WHERE user_id=%s
         ORDER BY timestamp DESC
@@ -195,13 +182,13 @@ def get_last_message(user_id=None):
     """
     result = query_one(qry, (user_id,))
 
-    if result == None:
+    if result is None:
         return None
 
-    return result["message"]
+    return result["message"], result["timestamp"]
 
 
-def get_user_id(birth=None, name=None, nric=None):
+def get_user_id(birth=None, name=None):
     '''
     Get user user_id with `user_name` and `user_bday`
     Returns matched user_id
@@ -214,7 +201,7 @@ def get_user_id(birth=None, name=None, nric=None):
     """
     result = query_one(qry, (name, birth))
 
-    if result == None:
+    if result is None:
         return None
 
     # Known issue (more than one user)
@@ -233,7 +220,7 @@ def get_user_name(user_id=None):
     """
     result = query_one(qry, (user_id, ))
 
-    if result == None:
+    if result is None:
         return None
 
     return result["user_name"]
@@ -248,7 +235,7 @@ def get_status(user_id=None):
 
     result = query_one(qry, (user_id,))
 
-    if result == None:
+    if result is None:
         return None
 
     return result["user_status"]
@@ -260,7 +247,7 @@ def add_user(user_id=None):
         VALUES (%s);
     """
 
-    is_success = update(qry, (user_id,))
+    update(qry, (user_id,))
 
     # TODO: Error Notification
 
@@ -272,7 +259,7 @@ def update_status(status=None, user_id=None):
         WHERE user_id=%s;
     """
 
-    is_success = update(qry, (status, user_id))
+    update(qry, (status, user_id))
 
     # TODO: Error Notification
 
@@ -286,7 +273,7 @@ def update_user_name(user_id=None, user_name=None):
         WHERE user_id=%s;
     """
 
-    is_success = update(qry, (user_name, user_id))
+    update(qry, (user_name, user_id))
 
     # TODO: Error Notification
 
@@ -298,7 +285,7 @@ def update_user_bday(user_id=None, user_bday=None):
         WHERE user_id=%s;
     """
 
-    is_success = update(qry, (user_bday, user_id))
+    update(qry, (user_bday, user_id))
 
     # TODO: Error Notification
 
@@ -310,7 +297,7 @@ def get_admin():
     """
     result = query_one(qry, None)
 
-    if result == None:
+    if result is None:
         return None
 
     return result

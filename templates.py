@@ -2,11 +2,18 @@
 '''
 Templates for replying messages, reduce the dirtiness of the responder
 '''
-from linebot.models import *
-
 import pickle
-import urllib
-import google_map as gmaps
+import traceback
+
+from linebot.models import (
+    LocationSendMessage, TemplateSendMessage, MessageAction,
+    CarouselColumn, CarouselTemplate, ButtonsTemplate, MessageTemplateAction
+)
+import googlemaps
+
+import environment
+
+gmaps = googlemaps.Client(key=environment.get_maps_key())
 
 ##############################
 # Multi purpose templates
@@ -197,16 +204,38 @@ def qa_template():
 # Scenario 1: High Temp Templates
 ##############################
 
-symptom = ['皮膚出疹', '眼窩痛', '喉嚨痛', '咳嗽', '咳血痰', '肌肉酸痛']
-
-symptom_reply = {
-    's1d0': "體溫異常升高，加上皮膚出疹為疑似登革熱情形，但這只是初步懷疑請不用太過驚慌，以下為相關資訊提供給您！",
-    's1d1': "體溫異常升高，加上眼窩痛為疑似登革熱情形，但這只是初步懷疑請不用太過驚慌，以下為相關資訊提供給您！",
-    's1d2': "體溫異常升高，加上喉嚨痛為疑似流感情形，但這只是初步懷疑請不用太過驚慌，以下為相關資訊提供給您！",
-    's1d3': "體溫異常升高，加上咳嗽為疑似流感情形，但這只是初步懷疑請不用太過驚慌，以下為相關資訊提供給您！",
-    's1d4': "體溫異常升高，加上咳血痰為疑似流感情形，但這只是初步懷疑請不用太過驚慌，以下為相關資訊提供給您！",
-    's1d5': "體溫異常升高，加上肌肉酸痛為疑登革熱/流感 情形，但這只是初步懷疑請不用太過驚慌，以下為相關資訊提供給您！"
-}
+symptoms_list = [
+    {
+        "status": "s1d0",
+        "label": "皮膚出疹",
+        "reply": "體溫異常升高，加上皮膚出疹為疑似登革熱情形，但這只是初步懷疑請不用太過驚慌，以下為相關資訊提供給您！"
+    },
+    {
+        "status": "s1d1",
+        "label": "眼窩痛",
+        "reply": "體溫異常升高，加上眼窩痛為疑似登革熱情形，但這只是初步懷疑請不用太過驚慌，以下為相關資訊提供給您！"
+    },
+    {
+        "status": "s1d2",
+        "label": "喉嚨痛",
+        "reply": "體溫異常升高，加上喉嚨痛為疑似流感情形，但這只是初步懷疑請不用太過驚慌，以下為相關資訊提供給您！"
+    },
+    {
+        "status": "s1d3",
+        "label": "咳嗽",
+        "reply": "體溫異常升高，加上咳嗽為疑似流感情形，但這只是初步懷疑請不用太過驚慌，以下為相關資訊提供給您！"
+    },
+    {
+        "status": "s1d4",
+        "label": "咳血痰",
+        "reply": "體溫異常升高，加上咳血痰為疑似流感情形，但這只是初步懷疑請不用太過驚慌，以下為相關資訊提供給您！"
+    },
+    {
+        "status": "s1d5",
+        "label": "肌肉酸痛",
+        "reply": "體溫異常升高，加上肌肉酸痛為疑登革熱/流感情形，但這只是初步懷疑請不用太過驚慌，以下為相關資訊提供給您！"
+    }
+]
 
 high_temp_greeting = "您好，手環資料顯示您的體溫似乎比較高，請問您有不舒服的情形嗎？"
 
@@ -218,106 +247,65 @@ high_temp_ask_location = "請將您目前的位置傳送給我～"
 
 high_temp_asap = "請盡快至您熟悉方便的醫療院所就醫。"
 
-
-def flu_reply():
-    reply = [
-        "體溫異常升高加上咳血痰疑似為流感情形，但這只是初步懷疑請不用太過驚慌，以下為流感相關資訊提供給您",
-        "https://www.cdc.gov.tw/Disease/SubIndex/x7jzGIMMuIeuLM5izvwg_g",
-        "為了您的安全健康，建議儘速至醫療院所就醫",
-        "請問是否需要提供您附近醫療院所的資訊"
-    ]
-    return "\n".join(reply)
-
-def dengue_reply():
-    reply = [
-        "體溫異常升高加上肌肉/骨頭痠痛疑似為流感/登革熱情形，但這只是初步懷疑請不用太過驚慌，以下相關資訊提供給您",
-        "https://www.cdc.gov.tw/Disease/SubIndex/x7jzGIMMuIeuLM5izvwg_g",
-        "https://www.cdc.gov.tw/Disease/SubIndex/WYbKe3aE7LiY5gb-eA8PBw",
-        "為了您的安全健康，建議儘速至醫療院所就醫",
-        "請問是否需要提供您附近醫療院所的資訊"
-    ]
-    return "\n".join(reply)
-
+high_temp_unknown = "不好意思，我不明白你的意思…"
 
 def flu_info():
-    info = ["流感併發重症", "https://www.cdc.gov.tw/Disease/SubIndex/x7jzGIMMuIeuLM5izvwg_g",
-            "新型A型流感", "https://www.cdc.gov.tw/Disease/SubIndex/8Yt_gKjz-BEr3QJZGOa0fQ"]
-    info = "\n".join(info)
-    return info
-
+    return "\n".join([
+        "流感併發重症",
+        "https://www.cdc.gov.tw/Disease/SubIndex/x7jzGIMMuIeuLM5izvwg_g",
+        "新型A型流感",
+        "https://www.cdc.gov.tw/Disease/SubIndex/8Yt_gKjz-BEr3QJZGOa0fQ"
+    ])
 
 def dengue_info():
-    info = ["登革熱", "https://www.cdc.gov.tw/Disease/SubIndex/WYbKe3aE7LiY5gb-eA8PBw"]
-    info = "\n".join(info)
-    return info
+    return "\n".join([
+        "登革熱",
+        "https://www.cdc.gov.tw/Disease/SubIndex/WYbKe3aE7LiY5gb-eA8PBw"
+    ])
 
 def symptoms_template():
-    symptom = ['皮膚出疹', '眼窩痛', '喉嚨痛', '咳嗽', '咳血痰', '肌肉酸痛']
-    symptoms = TemplateSendMessage(
+    return TemplateSendMessage(
         alt_text="請問您是否有以下的症狀？",
         template=CarouselTemplate(
             columns=[
                 CarouselColumn(
-                    title="請問您是否有以下的症狀？若無，請輸入其它。",
+                    title="請問您是否有以下的症狀？若無，請輸入\"無\"。",
                     text=" ",
                     actions=[
                         MessageAction(
-                            label=symptom[0],
-                            text=symptom[0]
-                        ),
-                        MessageAction(
-                            label=symptom[1],
-                            text=symptom[1],
-                        ),
-                        MessageAction(
-                            label=symptom[2],
-                            text=symptom[2]
-                        )
+                            label=symptom["label"],
+                            text=symptom["label"],
+                        ) for symptom in symptoms_list[:3]
                     ]
                 ),
                 CarouselColumn(
-                    title="請問您是否有以下的症狀？若無，請輸入其它。",
+                    title="請問您是否有以下的症狀？若無，請輸入\"無\"。",
                     text=" ",
                     actions=[
                         MessageAction(
-                            label=symptom[3],
-                            text=symptom[3]
-                        ),
-                        MessageAction(
-                            label=symptom[4],
-                            text=symptom[4],
-                        ),
-                        MessageAction(
-                            label=symptom[5],
-                            text=symptom[5]
-                        )
+                            label=symptom["label"],
+                            text=symptom["label"],
+                        ) for symptom in symptoms_list[3:]
                     ]
                 )
             ]
         )
     )
-    return symptoms
 
+def get_nearby_clinic(address):
+    try:
+        candidates = gmaps.places(query=f"{address} 內科 耳鼻喉", language="zh-TW")["results"]
+        # send the nearby clinic to user
+        if len(candidates) != 0:
+            return LocationSendMessage(
+                title="離您最近的診所是：" + candidates[0]["name"],
+                address=candidates[0]["formatted_address"],
+                latitude=candidates[0]["geometry"]["location"]["lat"],
+                longitude=candidates[0]["geometry"]["location"]["lng"]
+            )
 
-def get_nearby_clinic(address, keyword='內科 耳鼻喉科'):
-    # try:
-    nearby = gmaps.get_address(address, keyword)
-
-    # send the nearby clinic to user
-    if len(nearby) >= 1:
-        for pos in nearby:
-            # use url parser to extract latitude and longtitude
-            lat, long = urllib.parse.parse_qs(pos[2])["query"][0].split(",")
-
-            message = LocationSendMessage(
-                title="離您最近的診所是：" + pos[0],
-                address=pos[1],
-                latitude=str(lat),
-                longitude=str(long))
-            break  # now only push the first result
-        pass
-    else:
-        message = TextSendMessage("很抱歉，您附近並沒有相關的診所。")
-    # except:
-    #     message = TextSendMessage("很抱歉，您附近並沒有相關的診所。")
-    return message
+        return "很抱歉，您附近並沒有相關的診所。"
+    except Exception as err:
+        print(err)
+        print(traceback.format_exc())
+        print("Failed to get nearby clinic")

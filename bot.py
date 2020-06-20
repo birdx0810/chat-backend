@@ -1,15 +1,20 @@
 # -*- coding: UTF-8 -*-
-# Import 3rd-Party Dependencies
-import flask as flask
-from flask_cors import CORS, cross_origin
-from flask import (
-    Flask, abort, escape, request, redirect, url_for, jsonify
-)
-from flask_socketio import (
-    SocketIO, send, emit
-)
+# Import system modules
+import datetime
+import os
+import random
+import string
+import traceback
+import pickle
 
-import eventlet
+# Import 3rd-Party Dependencies
+import flask
+from flask_cors import CORS
+from flask import (
+    Flask, abort, request
+)
+from flask_socketio import SocketIO
+from werkzeug.serving import WSGIRequestHandler
 
 from linebot import (
     LineBotApi, WebhookHandler
@@ -18,26 +23,12 @@ from linebot.exceptions import (
     InvalidSignatureError
 )
 from linebot.models import (
-    MessageEvent, TextMessage, TextSendMessage, StickerMessage
+    MessageEvent, TextMessage, TextSendMessage
 )
-
-# Import system modules
-import datetime
-import logging
-import signal
-import sys
-import os
-import hashlib
-import json
-import random
-import string
-import pickle
 
 # Import local modules
 import database as db
 import event as e
-import templates as t
-import utilities
 import responder
 import environment
 
@@ -50,6 +41,8 @@ cors = CORS(app, resources={r"/foo": {"origins": "*"}})
 app.config['CORS_HEADERS'] = 'Content-Type'
 socketio = SocketIO(app, async_mode='eventlet', cors_allowed_origins='*')
 
+WSGIRequestHandler.protocol_version = "HTTP/1.1"
+
 environment.environment.set_env("development")
 environment.environment.lock()
 
@@ -58,9 +51,6 @@ keys = environment.get_key(environment.environment.get_env())
 line_bot_api = LineBotApi(keys[0])
 # Channel Secret
 handler = WebhookHandler(keys[1])
-
-# Initialize Session
-session = utilities.Session()
 
 ##############################
 # Callback API
@@ -73,7 +63,7 @@ def callback():
     signature = request.headers['X-Line-Signature']
     # get request body as text
     body = request.get_data(as_text=True)
-    app.logger.info("Request body: " + body)
+    # app.logger.info("Request body: " + body)
     # handle webhook body
     try:
         handler.handle(body, signature)
@@ -93,11 +83,11 @@ def high_temp():
         # Known issue user name and birthday conflict
         data = request.json
         user_id = db.get_user_id(birth=data["birth"], name=data["name"])
-        if user_id == None:
+        if user_id is None:
             raise ValueError(
                 f"User ID not found:\nUsername: {data['name']}\nUser BDay: {data['birth']}")
-    except Exception as e:
-        print(e)
+    except Exception as err:
+        print(err)
         print(traceback.format_exc())
         return abort(404, "Not Found: User ID not found")
 
@@ -145,19 +135,23 @@ def get_user():
     try:
         data = request.get_json(force=True)
         token = data["auth_token"]
-        assert(auth_valid(token))
-    except:
+        if not auth_valid(token):
+            raise ValueError(f"Invalid token {token}")
+    except Exception as err:
+        print(err)
+        print(traceback.format_exc())
         return abort(403, 'Forbidden: Authentication is bad')
 
     users = db.get_users()
     temp = []
 
-    for user_id, username in users:
+    for user_id, user_name in users:
+        last_msg, timestamp = db.get_last_message(user_id=user_id)
         temp.append({
             "user_id": user_id,
-            "user_name": username,
-            "last_content": session.status[user_id]["last_msg"],
-            "timestamp": session.status[user_id]["sess_time"],
+            "user_name": user_name,
+            "last_content": last_msg,
+            "timestamp": timestamp
         })
 
     response = flask.Response(str(temp))
@@ -185,8 +179,11 @@ def get_old_msgs():
     data = request.get_json(force=True)
     try:
         token = data["auth_token"]
-        assert(auth_valid(token))
-    except:
+        if not auth_valid(token):
+            raise ValueError(f"Invalid token {token}")
+    except Exception as err:
+        print(err)
+        print(traceback.format_exc())
         return abort(403, "Forbidden: Authentication is bad")
 
     user_id = data["user_id"]
@@ -199,7 +196,7 @@ def get_old_msgs():
     # Get offset time (-1 == now)
     if offset == -1:
         offset = datetime.datetime.now().timestamp()
-    elif type(offset) is str:
+    elif isinstance(offset, str):
         offset = float(offset)
         # offset = datetime.datetime.fromtimestamp(offset)
 
@@ -217,7 +214,7 @@ def get_old_msgs():
             temp.append({
                 "msg_id": filtered[count][0],
                 "user_id": user_id,
-                "user_name":  session.status[filtered[count][1]]["user_name"],
+                "user_name": db.get_user_name(user_id=filtered[count][1]),
                 "content": filtered[count][2],
                 "direction": filtered[count][3],
                 "timestamp": filtered[count][4],
@@ -226,7 +223,7 @@ def get_old_msgs():
         for message in filtered:
             temp.append({
                 "msg_id": message[0],
-                "user_name":  session.status[message[1]]["user_name"],
+                "user_name": db.get_user_name(user_id=message[1]),
                 "content": message[2],
                 "direction": message[3],
                 "timestamp": message[4],
@@ -240,12 +237,17 @@ def get_old_msgs():
 def send_msg():
     try:
         data = request.get_json(force=True)
-    except:
+    except Exception as err:
+        print(err)
+        print(traceback.format_exc())
         return abort(400, 'Bad Request: Error parsing to `json` format')
     try:
         token = data["auth_token"]
-        assert(auth_valid(token))
-    except:
+        if not auth_valid(token):
+            raise ValueError(f"Invalid token {token}")
+    except Exception as err:
+        print(err)
+        print(traceback.format_exc())
         return abort(403, 'Forbidden: Authentication is bad')
 
     user_id = data["user_id"]
@@ -254,11 +256,13 @@ def send_msg():
     try:
         message = TextSendMessage(text=message)
         line_bot_api.push_message(user_id, message)
-    except:
+    except Exception as err:
+        print(err)
+        print(traceback.format_exc())
         return abort(400, "Bad request: invalid message")
 
     frontend_data = {
-        "user_name": session.status[user_id]["user_name"],
+        "user_name": db.get_user_name(user_id=user_id),
         "user_id": user_id,
         "content": data["message"],
         "direction": 1,
@@ -278,12 +282,11 @@ def send_msg():
     response.headers['Access-Control-Allow-Origin'] = '*'
     return response
 
-@app.route("/broadcast", methods=['POST'])
-def broadcast_msg():
-    users = db.get_users()
-    for user in users:
-        # send_msg()
-        pass
+# @app.route("/broadcast", methods=['POST'])
+# def broadcast_msg():
+#     users = db.get_users()
+#     for user in users:
+#         send_msg()
 
 @app.route("/login", methods=['POST'])
 def log_in():
@@ -291,7 +294,9 @@ def log_in():
         data = request.get_json(force=True)
         username = data["username"]
         psw = data["password"]
-    except:
+    except Exception as err:
+        print(err)
+        print(traceback.format_exc())
         response = flask.Response(status=400)
         return response
 
@@ -303,13 +308,13 @@ def log_in():
         else:
             success = False
 
-    if success == True:
+    if success:
         token = find_token_of_admin(username)
-        if token == None:
+        if token is None:
             token = generate_token(username)
         response = flask.Response(response=token, status=200)
 
-    elif success == False:
+    elif not success:
         response = flask.Response(status=401)
 
     response.headers['Access-Control-Allow-Origin'] = '*'
@@ -336,23 +341,23 @@ def find_token_of_admin(username):
 
 def auth_valid(token):
     if len(auths.keys()) > 0:
-        for key, value in auths.items():
+        for key in auths:
             if key == token:
                 return True
-    else:
-        return False
+
+    return False
 
 # TODO: Save when signal interrupted
 
 def save_auths():
     path = "session/admin.pickle"
-    with open(path, "wb") as f:
-        pickle.dump(auths, f)
+    with open(path, "wb") as fb:
+        pickle.dump(auths, fb)
 
 def get_auths():
     path = "session/admin.pickle"
-    with open(path, "rb") as f:
-        pickle.load(f)
+    with open(path, "rb") as fb:
+        pickle.load(fb)
 
 #########################
 # socket connection
@@ -362,16 +367,21 @@ def get_auths():
 def handle_connection():
     try:
         token = request.args.get('auth_token')
-        assert(auth_valid(token))
-    except:
+        if not auth_valid(token):
+            raise ValueError(f"Invalid token {token}")
+        print('SOCKET: Connected')
+        socketio.emit('Response', {"data": "OK"}, broadcast=True)
+        print('SOCKET: Emitted')
+        return
+    except Exception as err:
+        print(err)
+        print(traceback.format_exc())
         return abort(403, 'Forbidden: Authentication is bad')
-    print('SOCKET: Connected')
-    socketio.emit('Response', {"data": "OK"}, broadcast=True)
-    print('SOCKET: Emitted')
+
 
 @socketio.on_error()
-def error_handler_chat(e):
-    print(e)
+def error_handler_chat(err):
+    print(err)
 
 ##############################
 # Message handler
@@ -395,7 +405,7 @@ def handle_message(event):
     # TODO: check timeout
     status = db.get_status(user_id=user_id)
 
-    if status == None:
+    if status is None:
         db.add_user(user_id=user_id)
         status = db.get_status(user_id=user_id)
 
@@ -459,7 +469,7 @@ def handle_message(event):
 
     # User in scenario 1
     elif status in ["s1s0", "s1s1", "s1d0", "s1d1", "s1d2",
-                    "s1d3", "s1d4", "s1d5", "s1d6", "s1s2",
+                    "s1d3", "s1d4", "s1d5", "s1df", "s1s2",
                     "s1s3", "s1s4"]:
         status = e.high_temp(
             event=event,
@@ -468,7 +478,8 @@ def handle_message(event):
         responder.high_temp(
             event=event,
             socketio=socketio,
-            status=status
+            status=status,
+            user_id=user_id
         )
 
     #########################
@@ -478,35 +489,6 @@ def handle_message(event):
     #     status = e.push_news(user_id, user_msg, session)
     #     responder.push_news(event, session)
 
-    '''
-    (DEPRECATED) User in chat state (currently unable to communicate)
-    '''
-    # else:
-    #     line_bot_api.reply_message(
-    #         event.reply_token,
-    #         TextSendMessage(text="不好意思，我還不會講話...")
-    #     )
-    #     db.log(user_id, "不好意思，我還不會講話...", direction=1)
-
-
-# Sticker message handler (echo)
-'''
-Deprecated: Stickers should not affect user status
-'''
-
-# @handler.add(MessageEvent, message=StickerMessage)
-# def handle_message(event):
-#     # Retrieve message metadata
-#     id = event.message.id
-#     sticker_id = event.message.sticker_id
-#     package_id = event.message.package_id
-
-#     line_bot_api.reply_message(
-#         event.reply_token,
-#         StickerMessage(id=id, sticker_id=sticker_id, package_id=package_id)
-#     )
-#     pass
-
 ##############################
 # Main function
 ##############################
@@ -515,22 +497,3 @@ if __name__ == "__main__":
     # Setup host port
     port = int(os.environ.get('PORT', 8080))
     socketio.run(app, host='0.0.0.0', port=port, debug=True)
-
-    # Load session
-    # session.load_session()
-
-    # Hook interrupt signal
-    # signal.signal(signal.SIGINT, session.signal_handler)
-
-    # Call function at apointed time
-    # while True:
-    #     time.sleep(3600*30)
-    #     time = datetime.datetime.now().strftime("%H:%M")
-    #     if time == "00:00":
-    #         db.sync(session)
-    # if time == 20:00:
-    # TODO: Run news crawler
-    # got_news = crawl()
-    # if got_news:
-    # TODO: Call news API
-    # break

@@ -6,28 +6,22 @@ The script for responding to user according to status
 - Event High Temperature
 - TODO: Event Push News
 '''
+
+import json
+import traceback
+
 # Import required modules
 from linebot import (
     LineBotApi, WebhookHandler
-
 )
-from linebot.exceptions import (
-    InvalidSignatureError
 
-)
 from linebot.models import (
-    MessageEvent, TextMessage, TextSendMessage, StickerMessage
+    TextSendMessage, LocationSendMessage
 )
 
 from sklearn.metrics.pairwise import cosine_similarity
 from bert_serving.client import BertClient
 
-import datetime
-import pickle
-import json
-import traceback
-
-import utilities
 import environment
 import database as db
 import templates
@@ -57,8 +51,8 @@ def send_frontend(direction=None, message=None, socketio=None, user_id=None):
         print("SOCKET: Sending to Front-End")
         socketio.emit('Message', frontend_data, json=True, broadcast=True)
         print("SOCKET: Emitted to Front-End")
-    except Exception as e:
-        print(e)
+    except Exception as err:
+        print(err)
         print(traceback.format_exc())
         print("Failed to emit message to frontend")
 
@@ -66,7 +60,7 @@ def send_frontend(direction=None, message=None, socketio=None, user_id=None):
 def send_text(event=None, message=None, socketio=None, user_id=None):
     '''
     This function wraps the utilties for logging and sending messages
-    event == None:  Push messages
+    event is None:  Push messages
     '''
     try:
         if event is None:
@@ -81,8 +75,8 @@ def send_text(event=None, message=None, socketio=None, user_id=None):
                 event.reply_token,
                 TextSendMessage(text=message)
             )
-    except Exception as e:
-        print(e)
+    except Exception as err:
+        print(err)
         print(traceback.format_exc())
         print("Failed to send message to LINE")
 
@@ -104,7 +98,7 @@ def send_text(event=None, message=None, socketio=None, user_id=None):
 def send_template(event=None, socketio=None, template=None, user_id=None):
     '''
     This function wraps the utilties for logging and sending templates
-    event == None:  Push templates
+    event is None:  Push templates
     '''
     try:
         if event is None:
@@ -117,8 +111,8 @@ def send_template(event=None, socketio=None, template=None, user_id=None):
                 event.reply_token,
                 template
             )
-    except Exception as e:
-        print(e)
+    except Exception as err:
+        print(err)
         print(traceback.format_exc())
         print("Failed to send message to LINE")
 
@@ -132,6 +126,36 @@ def send_template(event=None, socketio=None, template=None, user_id=None):
     db.log(
         direction=1,
         message=template.alt_text,
+        user_id=user_id
+    )
+
+def send_location(event=None, location=None, socketio=None, user_id=None):
+    try:
+        if event is None:
+            line_bot_api.push_message(
+                user_id,
+                location
+            )
+        else:
+            line_bot_api.reply_message(
+                event.reply_token,
+                location
+            )
+    except Exception as err:
+        print(err)
+        print(traceback.format_exc())
+        print("Failed to send message to LINE")
+
+    send_frontend(
+        direction=1,
+        message=location.title + "\n" + location.address,
+        socketio=socketio,
+        user_id=user_id)
+
+    # Save user message to DB (messages to user == 1)
+    db.log(
+        direction=1,
+        message=location.title + "\n" + location.address,
         user_id=user_id
     )
 
@@ -196,8 +220,8 @@ def qa(event=None, socketio=None, status=None):
         max_idx = 0
         text = text.lower()
         # Keyword matching
-        for idx, qa in enumerate(templates.qa_list):
-            for keyword in qa["keywords"]:
+        for idx, qa_obj in enumerate(templates.qa_list):
+            for keyword in qa_obj["keywords"]:
                 if keyword in text:
                     found = True
                     max_idx = idx
@@ -287,7 +311,7 @@ def qa(event=None, socketio=None, status=None):
     else:
         raise ValueError(f"Invalid status: {status}")
 
-def high_temp(event=None, socketio=None, status=None):
+def high_temp(event=None, socketio=None, status=None, user_id=None):
     '''
     High temperature event responder
     '''
@@ -297,7 +321,7 @@ def high_temp(event=None, socketio=None, status=None):
 
     # Scene 1:
     # Status 0 - API triggered
-    if status == 's1s0':
+    if status == "s1s0":
         # Detected user high temperature, ask patient well being
         send_template(
             event=None,
@@ -306,17 +330,17 @@ def high_temp(event=None, socketio=None, status=None):
             user_id=user_id
         )
 
-    # TODO: Status 1 - Ask if feeling sick
-    elif status == 's1s1':
+    # Status 1 - Ask if feeling sick
+    elif status == "s1s1":
         # If true (not feeling well), ask for symptoms
         send_template(
             event=None,
-            message=templates.symptom_template,
+            template=templates.symptoms_template(),
             socketio=socketio,
             user_id=user_id
         )
 
-    elif status == 's1f1':
+    elif status == "s1f1":
         # If false (feeling ok), reply msg
         send_text(
             event=event,
@@ -327,12 +351,29 @@ def high_temp(event=None, socketio=None, status=None):
 
         db.update_status(status="s", user_id=user_id)
 
-    # TODO: Status 2 - Ask for symptoms
-    elif status == 's1d0' or status == 's1d1':
-        # If '皮膚出疹' & '眼窩痛' detected
+    elif status == "s1s0_err":
         send_text(
             event=event,
-            message=templates.symptom_reply[status],
+            message=templates.high_temp_unknown,
+            socketio=socketio,
+            user_id=user_id
+        )
+
+        send_template(
+            event=None,
+            template=templates.tf_template(templates.high_temp_greeting),
+            socketio=socketio,
+            user_id=user_id
+        )
+
+    # Status 2 - Ask for symptoms
+    elif status in ["s1d0", "s1d1"]:
+        # If "皮膚出疹" & "眼窩痛" detected
+        send_text(
+            event=event,
+            message=list(filter(
+                lambda symptom: symptom["status"] == status, templates.symptoms_list
+            ))[0]["reply"],
             socketio=socketio,
             user_id=user_id
         )
@@ -346,16 +387,18 @@ def high_temp(event=None, socketio=None, status=None):
 
         send_template(
             event=None,
-            message=templates.want_template(templates.high_temp_ask_clinic),
+            template=templates.yn_template(templates.high_temp_ask_clinic),
             socketio=socketio,
             user_id=user_id
         )
 
-    elif status == 's1d2' or status == 's1d3' or status == 's1d4':
-        # If '喉嚨痛' & '咳嗽' & '咳血痰' detected
+    elif status in ["s1d2", "s1d3", "s1d4"]:
+        # If "喉嚨痛" & "咳嗽" & "咳血痰" detected
         send_text(
             event=event,
-            message=templates.symptom_reply[status],
+            message=list(filter(
+                lambda symptom: symptom["status"] == status, templates.symptoms_list
+            ))[0]["reply"],
             socketio=socketio,
             user_id=user_id
         )
@@ -369,16 +412,18 @@ def high_temp(event=None, socketio=None, status=None):
 
         send_template(
             event=None,
-            message=templates.want_template(templates.high_temp_ask_clinic),
+            template=templates.yn_template(templates.high_temp_ask_clinic),
             socketio=socketio,
             user_id=user_id
         )
 
-    elif status == 's1d5':
-        # If '肌肉酸痛' detected
+    elif status == "s1d5":
+        # If "肌肉酸痛" detected
         send_text(
             event=event,
-            message=templates.symptom_reply[status],
+            message=list(filter(
+                lambda symptom: symptom["status"] == status, templates.symptoms_list
+            ))[0]["reply"],
             socketio=socketio,
             user_id=user_id
         )
@@ -392,23 +437,31 @@ def high_temp(event=None, socketio=None, status=None):
 
         send_template(
             event=None,
-            message=templates.want_template(templates.high_temp_ask_clinic),
+            template=templates.yn_template(templates.high_temp_ask_clinic),
             socketio=socketio,
             user_id=user_id
         )
 
-    elif status == 's1df':
+    elif status == "s1df":
         # If other or no symptoms
         send_text(
             event=event,
+            message=templates.high_temp_unknown,
+            socketio=socketio,
+            user_id=user_id
+        )
+
+        send_text(
+            event=None,
             message=templates.high_temp_ending,
             socketio=socketio,
             user_id=user_id
         )
+
         db.update_status(status="s", user_id=user_id)
 
     # Status 3: Ask for location
-    elif status == 's1s2':
+    elif status == "s1s2":
         # If replies to ask for nearby clinic
         send_text(
             event=event,
@@ -417,7 +470,7 @@ def high_temp(event=None, socketio=None, status=None):
             user_id=user_id
         )
 
-    elif status == 's1f2':
+    elif status == "s1f2":
         # If doesn't need nearby clinic info
         send_text(
             event=event,
@@ -427,63 +480,80 @@ def high_temp(event=None, socketio=None, status=None):
         )
         db.update_status(status="s", user_id=user_id)
 
-    # TODO: Status 4: Return clinic and end scenario
-    elif status == 's1s3':
-        # Send clinic info and ask to go see doctor ASAP
-        clinic = templates.get_nearby_clinic(text)
-
-        line_bot_api.reply_message(
-            event.reply_token,
-            clinic
-        )
-
+    elif status == "s1dx_err":
         send_text(
-            event=False,
-            message=templates.high_temp_asap,
+            event=event,
+            message=templates.high_temp_unknown,
             socketio=socketio,
             user_id=user_id
         )
+
+        send_template(
+            event=None,
+            template=templates.yn_template(templates.high_temp_ask_clinic),
+            socketio=socketio,
+            user_id=user_id
+        )
+
+    # Status 4: Return clinic and end scenario
+    elif status == "s1s3":
+        # Send clinic info and ask to go see doctor ASAP
+        clinic = templates.get_nearby_clinic(text)
+
+        if isinstance(clinic, LocationSendMessage):
+            send_location(
+                event=event,
+                location=clinic,
+                socketio=socketio,
+                user_id=user_id
+            )
+        else:
+            send_text(
+                event=event,
+                message=clinic,
+                socketio=socketio,
+                user_id=user_id
+            )
 
         db.update_status(status="s", user_id=user_id)
 
 ##############################
 # Scenario 2: Push news to user from CDC.gov.tw
 ##############################
-'''
-def push_news(event, session):
-    # TODO: Push medical related news to all users
-    # Initialize variables
-    user_id = event.source.user_id
-    status = session.status[user_id]['sess_status']
 
-    if status == 's2s0':
-        # TODO: push news and ask if not feeling well?
-        # 1.1 Get news and templates message
-        news = get_news()
-        ask_location = templates.tf_template("請問您有在上述的區域內嗎？")
-        # 1.2 Push news and ask if in location
-        line_bot_api.push_message(user_id, news)
-        line_bot_api.push_message(user_id, ask_location)
-    elif status == 's2s1':
-        # 2.1 If in location with case
-        msg = "因為您所在的地區有確診案例，請問您有不舒服的狀況嗎？"
-        line_bot_api.reply_message(
-            event.reply_token,
-            TextSendMessage(text=msg)
-        )
-    elif status == 's2f1':
-        # 2.2 If not in the location (end)
-        msg = "您所在的位置非疫情區，因此不用太過緊張。若有最新消息將會立即更新讓您第一時間了解！"
-        line_bot_api.reply_message(
-            event.reply_token,
-            TextSendMessage(text=msg)
-        )
-    elif status == 's2s2':
-        # 2.3 Doctor function
-        msg = "把我當成一個醫生，說說您現在哪邊不舒服？"
-        line_bot_api.reply_message(
-            event.reply_token,
-            TextSendMessage(text=msg)
-        )
-    pass
-'''
+# def push_news(event, session):
+#     # TODO: Push medical related news to all users
+#     # Initialize variables
+#     user_id = event.source.user_id
+#     status = session.status[user_id]['sess_status']
+
+#     if status == 's2s0':
+#         # TODO: push news and ask if not feeling well?
+#         # 1.1 Get news and templates message
+#         news = get_news()
+#         ask_location = templates.tf_template("請問您有在上述的區域內嗎？")
+#         # 1.2 Push news and ask if in location
+#         line_bot_api.push_message(user_id, news)
+#         line_bot_api.push_message(user_id, ask_location)
+#     elif status == 's2s1':
+#         # 2.1 If in location with case
+#         msg = "因為您所在的地區有確診案例，請問您有不舒服的狀況嗎？"
+#         line_bot_api.reply_message(
+#             event.reply_token,
+#             TextSendMessage(text=msg)
+#         )
+#     elif status == 's2f1':
+#         # 2.2 If not in the location (end)
+#         msg = "您所在的位置非疫情區，因此不用太過緊張。若有最新消息將會立即更新讓您第一時間了解！"
+#         line_bot_api.reply_message(
+#             event.reply_token,
+#             TextSendMessage(text=msg)
+#         )
+#     elif status == 's2s2':
+#         # 2.3 Doctor function
+#         msg = "把我當成一個醫生，說說您現在哪邊不舒服？"
+#         line_bot_api.reply_message(
+#             event.reply_token,
+#             TextSendMessage(text=msg)
+#         )
+#     pass
