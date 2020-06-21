@@ -1,6 +1,6 @@
 # -*- coding: UTF-8 -*-
 # Import system modules
-from datetime import datetime
+from datetime import datetime, timedelta
 import binascii
 import os
 import traceback
@@ -11,38 +11,21 @@ import mysql.connector as mariadb
 import environment
 
 # Is development or production
-config = environment.get_config(environment.environment.get_env())
-
-# Connect to DB
-
-
-def connect():
-    """
-    Initialize the connection to DB
-    Prints an error if fail to connect
-    """
-    try:
-        conn = mariadb.connect(**config)
-    except mariadb.Error as err:
-        print(err)
-        print(traceback.format_exc())
-    return conn
+config = environment.get_database_config(environment.environment.get_env())
 
 # Function factory
-
-
 def query_one(qry, var):
     """
     Function for executing `SELECT * FROM table WHERE var0=foo, var1=bar`
     """
-    rows = None
+    row = None
 
     try:
         conn = mariadb.connect(**config)
         try:
             cursor = conn.cursor(dictionary=True)
             cursor.execute(qry, var)
-            rows = cursor.fetchone()
+            row = cursor.fetchone()
         except Exception as err:
             print(err)
             print(traceback.format_exc())
@@ -54,10 +37,10 @@ def query_one(qry, var):
     finally:
         conn.close()
 
-    if rows is None:
+    if row is None:
         print("Query result is empty")
 
-    return rows
+    return row
 
 
 def query_all(qry, var):
@@ -128,7 +111,7 @@ def log(direction=None, message=None, timestamp=None, user_id=None):
     Log user messages and the replies of bot to DB
     """
     qry = """
-        INSERT INTO mb_logs (user_id, message, direction, timestamp) 
+        INSERT INTO mb_logs (user_id, message, direction, timestamp)
         VALUES (%s, %s, %s, %s);
     """
     if timestamp is None:
@@ -142,6 +125,7 @@ def log(direction=None, message=None, timestamp=None, user_id=None):
     elif direction == 1:
         direction = "TO"
     print(f"Message {direction} user {user_id} saved to DB")
+    return timestamp
 
 
 def get_users():
@@ -163,13 +147,14 @@ def get_messages(max_amount=None, offset=None, user_id=None):
     """
     qry = """
         SELECT msg_id, user_id, message, direction, timestamp
-        FROM mb_logs 
-        WHERE user_id=%s 
+        FROM mb_logs
+        WHERE user_id=%s
         ORDER BY timestamp DESC
         LIMIT %s OFFSET %s;
     """
 
     result = query_all(qry, (user_id, max_amount, offset))
+
     return result
 
 
@@ -178,7 +163,7 @@ def get_last_message(user_id=None):
     Get last message
     """
     qry = """
-        SELECT user_id, message, timestamp
+        SELECT message, timestamp
         FROM mb_logs
         WHERE user_id=%s
         ORDER BY timestamp DESC
@@ -187,7 +172,7 @@ def get_last_message(user_id=None):
     result = query_one(qry, (user_id,))
 
     if result is None:
-        return None
+        return None, None
 
     return result["message"], result["timestamp"]
 
@@ -199,9 +184,10 @@ def get_user_id(birth=None, name=None):
     """
     qry = """
         SELECT user_id
-        FROM mb_user 
+        FROM mb_user
         WHERE user_name=%s AND user_bday=%s
-        ORDER BY user_id ASC;
+        ORDER BY user_id ASC
+        LIMIT 1;
     """
     result = query_one(qry, (name, birth))
 
@@ -220,7 +206,8 @@ def get_user_name(user_id=None):
     qry = """
         SELECT user_name
         FROM mb_user
-        WHERE user_id=%s;
+        WHERE user_id=%s
+        LIMIT 1;
     """
     result = query_one(qry, (user_id, ))
 
@@ -232,9 +219,10 @@ def get_user_name(user_id=None):
 
 def get_status(user_id=None):
     qry = """
-    SELECT user_status
-    FROM mb_user
-    WHERE user_id=%s;
+        SELECT user_status
+        FROM mb_user
+        WHERE user_id=%s
+        LIMIT 1;
     """
 
     result = query_one(qry, (user_id,))
@@ -298,18 +286,41 @@ def check_login(user_name=None, password=None, token=None):
     qry_1 = """
         SELECT timestamp
         FROM mb_admin
-        WHERE token=%s;
+        WHERE token=%s
+        LIMIT 1;
     """
-    timestamp = query_one(qry_1, (token,))
+    result = query_one(qry_1, (token,))
 
-    if timestamp is None:
+    if result is not None:
+        expired = datetime.now().timestamp() - result["timestamp"] > timedelta(days=30).total_seconds()
 
-        qry_2 = """
+        if expired:
+            qry_2 = """
+                UPDATE mb_admin
+                SET token=%s
+                WHERE token=%s;
+            """
+            update(qry_2, (binascii.hexlify(os.urandom(24)).decode(), token))
+
+            return None
+
+        qry_3 = """
+            UPDATE mb_admin
+            SET timestamp=%s
+            WHERE token=%s;
+        """
+
+        update(qry_3, (datetime.now().timestamp(), token))
+
+    if result is None:
+
+        qry_4 = """
             SELECT admin_name, admin_pass
             FROM mb_admin
-            WHERE admin_name=%s AND admin_pass=%s;
+            WHERE admin_name=%s AND admin_pass=%s
+            LIMIT 1;
         """
-        is_valid = query_one(qry_2, (user_name, password))
+        is_valid = query_one(qry_4, (user_name, password))
 
         if is_valid is None:
             return None
@@ -317,21 +328,15 @@ def check_login(user_name=None, password=None, token=None):
         token = binascii.hexlify(os.urandom(24)).decode()
         timestamp = datetime.now().timestamp()
 
-        qry_3 = """
+        qry_5 = """
             UPDATE mb_admin
             SET token=%s, timestamp=%s
             WHERE admin_name=%s AND admin_pass=%s;
         """
 
-        is_success = update(qry_3, (token, timestamp, user_name, password))
+        is_success = update(qry_5, (token, timestamp, user_name, password))
 
         if not is_success:
             return None
 
     return token
-
-
-# Unit test for database
-if __name__ == "__main__":
-    results = get_users()
-    print(results)

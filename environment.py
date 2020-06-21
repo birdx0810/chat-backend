@@ -66,17 +66,17 @@ def get_maps_key():
     return keys
 
 
-def get_config(env):
+def get_database_config(env):
     """
     Get database config file
     """
     if env == "development":
         path = os.path.abspath(
-            f"{os.path.abspath(__file__)}/../config/development.json"
+            f"{os.path.abspath(__file__)}/../config/database/development.json"
         )
     elif env == "production":
         path = os.path.abspath(
-            f"{os.path.abspath(__file__)}/../config/production.json"
+            f"{os.path.abspath(__file__)}/../config/database/production.json"
         )
     else:
         raise ValueError(
@@ -89,6 +89,24 @@ def get_config(env):
         keys = json.load(config_file)
 
     return keys
+
+
+def get_server_config():
+    """
+    Get server config file
+    """
+
+    path = os.path.abspath(
+        f"{os.path.abspath(__file__)}/../config/server.json"
+    )
+
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"{path} does not exist")
+
+    with open(path, "r") as config_file:
+        config = json.load(config_file)
+
+    return config
 
 
 environment = __Environment("development")

@@ -40,14 +40,15 @@ handler = WebhookHandler(keys[1])
 sentence_encoder = BertClient(ip="140.116.245.101")
 
 
-def send_frontend(direction=None, message=None, socketio=None, user_id=None):
+def send_frontend(direction=None, message=None, socketio=None, timestamp=None, user_id=None):
     try:
-        frontend_data = json.dumps({
+        frontend_data = json.dumps([{
             "user_name": db.get_user_name(user_id=user_id),
             "user_id": user_id,
             "content": message,
-            "direction": direction
-        })
+            "direction": direction,
+            "timestamp": timestamp
+        }])
         print("SOCKET: Sending to Front-End")
         socketio.emit("Message", frontend_data, json=True, broadcast=True)
         print("SOCKET: Emitted to Front-End")
@@ -62,14 +63,19 @@ def send_text(event=None, message=None, socketio=None, user_id=None):
     This function wraps the utilties for logging and sending messages
     event is None:  Push messages
     """
+    # Save user message to DB (messages to user == 1)
+    timestamp = db.log(
+        direction=1,
+        message=message,
+        user_id=user_id
+    )
+
     try:
         if event is None:
-            print("Event is None")
             line_bot_api.push_message(
                 user_id,
                 TextSendMessage(text=message)
             )
-            print("Are you sleeping")
         else:
             line_bot_api.reply_message(
                 event.reply_token,
@@ -84,15 +90,10 @@ def send_text(event=None, message=None, socketio=None, user_id=None):
         direction=1,
         message=message,
         socketio=socketio,
+        timestamp=timestamp,
         user_id=user_id
     )
 
-    # Save user message to DB (messages to user == 1)
-    db.log(
-        direction=1,
-        message=message,
-        user_id=user_id
-    )
 
 
 def send_template(event=None, socketio=None, template=None, user_id=None):
@@ -100,6 +101,14 @@ def send_template(event=None, socketio=None, template=None, user_id=None):
     This function wraps the utilties for logging and sending templates
     event is None:  Push templates
     """
+
+    # Save user message to DB (messages to user == 1)
+    timestamp = db.log(
+        direction=1,
+        message=template.alt_text,
+        user_id=user_id
+    )
+
     try:
         if event is None:
             line_bot_api.push_message(
@@ -120,17 +129,20 @@ def send_template(event=None, socketio=None, template=None, user_id=None):
         direction=1,
         message=template.alt_text,
         socketio=socketio,
-        user_id=user_id)
-
-    # Save user message to DB (messages to user == 1)
-    db.log(
-        direction=1,
-        message=template.alt_text,
+        timestamp=timestamp,
         user_id=user_id
     )
+
 
 
 def send_location(event=None, location=None, socketio=None, user_id=None):
+    # Save user message to DB (messages to user == 1)
+    timestamp = db.log(
+        direction=1,
+        message=location.title + "\n" + location.address,
+        user_id=user_id
+    )
+
     try:
         if event is None:
             line_bot_api.push_message(
@@ -147,18 +159,15 @@ def send_location(event=None, location=None, socketio=None, user_id=None):
         print(traceback.format_exc())
         print("Failed to send message to LINE")
 
+
     send_frontend(
         direction=1,
         message=location.title + "\n" + location.address,
         socketio=socketio,
-        user_id=user_id)
-
-    # Save user message to DB (messages to user == 1)
-    db.log(
-        direction=1,
-        message=location.title + "\n" + location.address,
+        timestamp=timestamp,
         user_id=user_id
     )
+
 
 
 def registration(event=None, socketio=None, status=None):

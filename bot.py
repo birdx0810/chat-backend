@@ -33,6 +33,11 @@ import environment
 ##############################
 # Application & variable initialization
 ##############################
+
+config = environment.get_server_config()
+environment.environment.set_env(config["mode"])
+environment.environment.lock()
+
 # Initialize Flask
 app = Flask(__name__, static_folder=None)
 cors = CORS(app, resources={
@@ -41,13 +46,10 @@ cors = CORS(app, resources={
     r"/messages": {"Access-Control-Allow-Credentials": True},
     r"/send": {"Access-Control-Allow-Credentials": True}
 })
-app.config["SERVER_NAME"] = "bird.ikmlab.csie.ncku.edu.tw"
+app.config["SERVER_NAME"] = config["server_name"]
 socketio = SocketIO(app, async_mode="eventlet", cors_allowed_origins="*")
 
 WSGIRequestHandler.protocol_version = "HTTP/1.1"
-
-environment.environment.set_env("development")
-environment.environment.lock()
 
 keys = environment.get_key(environment.environment.get_env())
 # Channel Access Token
@@ -158,7 +160,6 @@ def get_old_msgs():
         - maxAmount: int
     - output:
         array[{
-            msg_id,
             user_id,
             user_name,
             direction,
@@ -190,7 +191,7 @@ def get_old_msgs():
 
         for message in messages:
             temp.append({
-                "msg_id": message["msg_id"],
+                "user_id": user_id,
                 "user_name": user_name,
                 "content": message["message"],
                 "direction": message["direction"],
@@ -255,7 +256,7 @@ def login():
 
         if "token" in data:
             token = data["token"]
-        else:
+        if "username" in data and "password" in data:
             user_name = data["username"]
             password = data["password"]
     except Exception as err:
@@ -280,7 +281,7 @@ def login():
         max_age=int(timedelta(days=30).total_seconds()),
         expires=datetime.now() + timedelta(days=30),
         path="/",
-        domain="bird.ikmlab.csie.ncku.edu.tw/"
+        domain=config["server_name"]
     )
 
     response.headers["Access-Control-Allow-Origin"] = "*"
@@ -325,26 +326,40 @@ def handle_message(event):
     Pass id, msg, and session into event function and return updated status
     Respond to user according to new status
     """
-    # Print event metadata
-    # print(event)
 
     # Retreive user metadata
     user_id = event.source.user_id
     user_msg = event.message.text
-    # Converted from JavaScript milisecond to second
-    timestamp = event.timestamp/1000
-
     # TODO: check timeout
     status = db.get_status(user_id=user_id)
+    _, timestamp = db.get_last_message(user_id=user_id)
 
     if status is None:
         db.add_user(user_id=user_id)
         status = db.get_status(user_id=user_id)
 
+    if timestamp is not None:
+        expired = datetime.now().timestamp() - timestamp > timedelta(days=1).total_seconds()
+
+        if expired:
+            status = db.update_status(
+                status='s',
+                user_id=user_id
+            )
+
+
     # Log user metadata
     print(f"\nUser: {user_id}")
     print(f"Message: {user_msg}")
     print(f"Status: {status}\n")
+
+
+    # Log user message to database
+    db.log(
+        direction=0,
+        message=user_msg,
+        user_id=user_id
+    )
 
     # Send user message to frontend
     responder.send_frontend(
@@ -352,14 +367,6 @@ def handle_message(event):
         socketio=socketio,
         user_id=user_id,
         message=user_msg
-    )
-
-    # Log user message to database
-    db.log(
-        direction=0,
-        timestamp=timestamp,
-        message=user_msg,
-        user_id=user_id
     )
 
     # User in registration
@@ -419,7 +426,7 @@ def handle_message(event):
 def allow_cors(response):
     response.headers["Access-Control-Allow-Credentials"] = "true"
     response.headers["Access-Control-Allow-Headers"] = "Content-Type, Set-Cookie, *"
-    response.headers["Access-Control-Allow-Origin"] = "http://localhost:19006"
+    response.headers["Access-Control-Allow-Origin"] = config["client_name"]
     return response
 
 ##############################
