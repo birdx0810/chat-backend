@@ -1,6 +1,8 @@
 # -*- coding: UTF-8 -*-
 # Import system modules
 from datetime import datetime
+import binascii
+import os
 import traceback
 
 # Import 3rd-party modules
@@ -13,11 +15,12 @@ config = environment.get_config(environment.environment.get_env())
 
 # Connect to DB
 
+
 def connect():
-    '''
+    """
     Initialize the connection to DB
     Prints an error if fail to connect
-    '''
+    """
     try:
         conn = mariadb.connect(**config)
     except mariadb.Error as err:
@@ -29,22 +32,22 @@ def connect():
 
 
 def query_one(qry, var):
-    '''
+    """
     Function for executing `SELECT * FROM table WHERE var0=foo, var1=bar`
-    '''
+    """
     rows = None
 
     try:
         conn = mariadb.connect(**config)
         try:
-            c = conn.cursor(dictionary=True)
-            c.execute(qry, var)
-            rows = c.fetchone()
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute(qry, var)
+            rows = cursor.fetchone()
         except Exception as err:
             print(err)
             print(traceback.format_exc())
         finally:
-            c.close()
+            cursor.close()
     except Exception as err:
         print(err)
         print(traceback.format_exc())
@@ -58,22 +61,22 @@ def query_one(qry, var):
 
 
 def query_all(qry, var):
-    '''
+    """
     Function for executing `SELECT * FROM table WHERE var0=foo, var1=bar`
-    '''
+    """
     rows = []
 
     try:
         conn = mariadb.connect(**config)
         try:
-            c = conn.cursor(dictionary=True)
-            c.execute(qry, var)
-            rows = c.fetchall()
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute(qry, var)
+            rows = cursor.fetchall()
         except Exception as err:
             print(err)
             print(traceback.format_exc())
         finally:
-            c.close()
+            cursor.close()
     except Exception as err:
         print(err)
         print(traceback.format_exc())
@@ -87,23 +90,23 @@ def query_all(qry, var):
 
 
 def update(qry, var):
-    '''
+    """
     Function for updating DB
-    '''
+    """
     is_success = False
     try:
         conn = mariadb.connect(**config)
         conn.autocommit = False
         conn.start_transaction()
         try:
-            c = conn.cursor()
-            c.execute(qry, var)
+            cursor = conn.cursor()
+            cursor.execute(qry, var)
             is_success = True
         except mariadb.Error as err:
             print(err)
             print(traceback.format_exc())
         finally:
-            c.close()
+            cursor.close()
 
     except mariadb.Error as err:
         conn.rollback()
@@ -121,9 +124,9 @@ def update(qry, var):
 
 
 def log(direction=None, message=None, timestamp=None, user_id=None):
-    '''
+    """
     Log user messages and the replies of bot to DB
-    '''
+    """
     qry = """
         INSERT INTO mb_logs (user_id, message, direction, timestamp) 
         VALUES (%s, %s, %s, %s);
@@ -142,9 +145,9 @@ def log(direction=None, message=None, timestamp=None, user_id=None):
 
 
 def get_users():
-    '''
+    """
     Gets the `user_id` and `user_name` for all users
-    '''
+    """
     qry = """
         SELECT user_id, user_name
         FROM mb_user;
@@ -154,25 +157,26 @@ def get_users():
     return result
 
 
-def get_messages(user_id=None):
-    '''
+def get_messages(max_amount=None, offset=None, user_id=None):
+    """
     Gets all messages from database
-    '''
+    """
     qry = """
-        SELECT * 
+        SELECT msg_id, user_id, message, direction, timestamp
         FROM mb_logs 
         WHERE user_id=%s 
-        ORDER BY timestamp DESC;
+        ORDER BY timestamp DESC
+        LIMIT %s OFFSET %s;
     """
 
-    result = query_all(qry, (user_id,))
+    result = query_all(qry, (user_id, max_amount, offset))
     return result
 
 
 def get_last_message(user_id=None):
-    '''
+    """
     Get last message
-    '''
+    """
     qry = """
         SELECT user_id, message, timestamp
         FROM mb_logs
@@ -189,10 +193,10 @@ def get_last_message(user_id=None):
 
 
 def get_user_id(birth=None, name=None):
-    '''
+    """
     Get user user_id with `user_name` and `user_bday`
     Returns matched user_id
-    '''
+    """
     qry = """
         SELECT user_id
         FROM mb_user 
@@ -209,10 +213,10 @@ def get_user_id(birth=None, name=None):
 
 
 def get_user_name(user_id=None):
-    '''
+    """
     Get user `user_name` with `user_id`
     Returns matched `user_name`
-    '''
+    """
     qry = """
         SELECT user_name
         FROM mb_user
@@ -290,33 +294,44 @@ def update_user_bday(user_id=None, user_bday=None):
     # TODO: Error Notification
 
 
-def get_admin():
-    qry = """
-        SELECT admin_name, admin_pass
-        FROM mb_admin;
+def check_login(user_name=None, password=None, token=None):
+    qry_1 = """
+        SELECT timestamp
+        FROM mb_admin
+        WHERE token=%s;
     """
-    result = query_one(qry, None)
+    timestamp = query_one(qry_1, (token,))
 
-    if result is None:
-        return None
+    if timestamp is None:
 
-    return result
+        qry_2 = """
+            SELECT admin_name, admin_pass
+            FROM mb_admin
+            WHERE admin_name=%s AND admin_pass=%s;
+        """
+        is_valid = query_one(qry_2, (user_name, password))
+
+        if is_valid is None:
+            return None
+
+        token = binascii.hexlify(os.urandom(24)).decode()
+        timestamp = datetime.now().timestamp()
+
+        qry_3 = """
+            UPDATE mb_admin
+            SET token=%s, timestamp=%s
+            WHERE admin_name=%s AND admin_pass=%s;
+        """
+
+        is_success = update(qry_3, (token, timestamp, user_name, password))
+
+        if not is_success:
+            return None
+
+    return token
 
 
 # Unit test for database
 if __name__ == "__main__":
     results = get_users()
     print(results)
-    # results = get_messages("U96df1b7908bfe4d71970d05f344c7694")
-    # print(results)
-
-    # qry = "SELECT * FROM mb_user"
-    # try:
-    #     conn = mariadb.connect(**config)
-    #     c = conn.cursor()
-    #     c.execute(qry)
-    #     results = c.fetchall()
-    # finally:
-    #     c.close()
-    #     conn.close()
-    # print(results)

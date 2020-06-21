@@ -14,20 +14,20 @@ class __Environment():
 
     def set_env(self, env):
         if self.freeze:
-            raise ValueError('Try to update environment')
+            raise ValueError("Try to update environment")
         self.env = env
 
     def get_env(self):
         return self.env
 
     def is_development(self):
-        return self.get_env() == 'development'
+        return self.get_env() == "development"
 
 
 def get_key(env):
-    '''
+    """
     Get API and webhook key for given environment
-    '''
+    """
     if env == "development":
         path = os.path.abspath(
             f"{os.path.abspath(__file__)}/../key/development"
@@ -43,15 +43,16 @@ def get_key(env):
     if not os.path.exists(path):
         raise FileNotFoundError(f"{path} does not exist")
 
-    with open(path, "r") as f:
-        keys = [line.strip() for line in f.readlines()]
+    with open(path, "r") as line_api_keys:
+        keys = [line.strip() for line in line_api_keys.readlines()]
 
     return keys
 
+
 def get_maps_key():
-    '''
+    """
     Get Google Maps API key
-    '''
+    """
     path = os.path.abspath(
         f"{os.path.abspath(__file__)}/../key/google_maps"
     )
@@ -59,17 +60,16 @@ def get_maps_key():
     if not os.path.exists(path):
         raise FileNotFoundError(f"{path} does not exist")
 
-    with open(path, "r") as f:
-        keys = f.read().strip()
+    with open(path, "r") as google_map_key:
+        keys = google_map_key.read().strip()
 
     return keys
 
 
-
 def get_config(env):
-    '''
+    """
     Get database config file
-    '''
+    """
     if env == "development":
         path = os.path.abspath(
             f"{os.path.abspath(__file__)}/../config/development.json"
@@ -85,10 +85,10 @@ def get_config(env):
     if not os.path.exists(path):
         raise FileNotFoundError(f"{path} does not exist")
 
-    with open(path, "r") as f:
-        keys = json.load(f)
+    with open(path, "r") as config_file:
+        keys = json.load(config_file)
 
     return keys
 
 
-environment = __Environment('development')
+environment = __Environment("development")

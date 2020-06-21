@@ -1,11 +1,11 @@
 # -*- coding: UTF-8 -*-
-'''
+"""
 The script for responding to user according to status
 - Registration
 - QA
 - Event High Temperature
 - TODO: Event Push News
-'''
+"""
 
 import json
 import traceback
@@ -37,7 +37,7 @@ line_bot_api = LineBotApi(keys[0])
 handler = WebhookHandler(keys[1])
 
 # Initialize BERT-as-service encoder
-sentence_encoder = BertClient(ip='140.116.245.101')
+sentence_encoder = BertClient(ip="140.116.245.101")
 
 
 def send_frontend(direction=None, message=None, socketio=None, user_id=None):
@@ -49,7 +49,7 @@ def send_frontend(direction=None, message=None, socketio=None, user_id=None):
             "direction": direction
         })
         print("SOCKET: Sending to Front-End")
-        socketio.emit('Message', frontend_data, json=True, broadcast=True)
+        socketio.emit("Message", frontend_data, json=True, broadcast=True)
         print("SOCKET: Emitted to Front-End")
     except Exception as err:
         print(err)
@@ -58,10 +58,10 @@ def send_frontend(direction=None, message=None, socketio=None, user_id=None):
 
 
 def send_text(event=None, message=None, socketio=None, user_id=None):
-    '''
+    """
     This function wraps the utilties for logging and sending messages
     event is None:  Push messages
-    '''
+    """
     try:
         if event is None:
             print("Event is None")
@@ -96,10 +96,10 @@ def send_text(event=None, message=None, socketio=None, user_id=None):
 
 
 def send_template(event=None, socketio=None, template=None, user_id=None):
-    '''
+    """
     This function wraps the utilties for logging and sending templates
     event is None:  Push templates
-    '''
+    """
     try:
         if event is None:
             line_bot_api.push_message(
@@ -128,6 +128,7 @@ def send_template(event=None, socketio=None, template=None, user_id=None):
         message=template.alt_text,
         user_id=user_id
     )
+
 
 def send_location(event=None, location=None, socketio=None, user_id=None):
     try:
@@ -159,28 +160,29 @@ def send_location(event=None, location=None, socketio=None, user_id=None):
         user_id=user_id
     )
 
+
 def registration(event=None, socketio=None, status=None):
-    '''
+    """
     Gets the status of user and replies according to user's registration status
-    '''
+    """
     # Initialize variables
     user_id = event.source.user_id
 
-    if status == 'r0':
+    if status == "r0":
         send_text(
             event=event,
             message=templates.registration_greeting,
             socketio=socketio,
             user_id=user_id
         )
-    elif status == 'r1':
+    elif status == "r1":
         send_text(
             event=event,
             message=templates.registration_birthday,
             socketio=socketio,
             user_id=user_id
         )
-    elif status == 'r2':
+    elif status == "r2":
         send_text(
             event=event,
             message=templates.registration_successful,
@@ -188,7 +190,7 @@ def registration(event=None, socketio=None, status=None):
             user_id=user_id
         )
         db.update_status(status="s", user_id=user_id)
-    elif status == 'r_err':
+    elif status == "r_err":
         send_text(
             event=event,
             message=templates.registration_err(
@@ -200,10 +202,11 @@ def registration(event=None, socketio=None, status=None):
     else:
         raise ValueError(f"Invalid status: {status}")
 
+
 def qa(event=None, socketio=None, status=None):
-    '''
+    """
     Reply user according to status
-    '''
+    """
     user_id = event.source.user_id
     text = event.message.text
 
@@ -290,8 +293,8 @@ def qa(event=None, socketio=None, status=None):
     elif status == "qa3":
         msg = templates.qa_sorry
 
-        for idx, qa in enumerate(templates.qa_list):
-            if text == qa["question"]:
+        for idx, qa_obj in enumerate(templates.qa_list):
+            if text == qa_obj["question"]:
                 msg = templates.qa_response(idx)
                 break
 
@@ -311,10 +314,11 @@ def qa(event=None, socketio=None, status=None):
     else:
         raise ValueError(f"Invalid status: {status}")
 
+
 def high_temp(event=None, socketio=None, status=None, user_id=None):
-    '''
+    """
     High temperature event responder
-    '''
+    """
     # Initialize variables
     if event is not None:
         text = event.message.text
@@ -516,44 +520,3 @@ def high_temp(event=None, socketio=None, status=None, user_id=None):
             )
 
         db.update_status(status="s", user_id=user_id)
-
-##############################
-# Scenario 2: Push news to user from CDC.gov.tw
-##############################
-
-# def push_news(event, session):
-#     # TODO: Push medical related news to all users
-#     # Initialize variables
-#     user_id = event.source.user_id
-#     status = session.status[user_id]['sess_status']
-
-#     if status == 's2s0':
-#         # TODO: push news and ask if not feeling well?
-#         # 1.1 Get news and templates message
-#         news = get_news()
-#         ask_location = templates.tf_template("請問您有在上述的區域內嗎？")
-#         # 1.2 Push news and ask if in location
-#         line_bot_api.push_message(user_id, news)
-#         line_bot_api.push_message(user_id, ask_location)
-#     elif status == 's2s1':
-#         # 2.1 If in location with case
-#         msg = "因為您所在的地區有確診案例，請問您有不舒服的狀況嗎？"
-#         line_bot_api.reply_message(
-#             event.reply_token,
-#             TextSendMessage(text=msg)
-#         )
-#     elif status == 's2f1':
-#         # 2.2 If not in the location (end)
-#         msg = "您所在的位置非疫情區，因此不用太過緊張。若有最新消息將會立即更新讓您第一時間了解！"
-#         line_bot_api.reply_message(
-#             event.reply_token,
-#             TextSendMessage(text=msg)
-#         )
-#     elif status == 's2s2':
-#         # 2.3 Doctor function
-#         msg = "把我當成一個醫生，說說您現在哪邊不舒服？"
-#         line_bot_api.reply_message(
-#             event.reply_token,
-#             TextSendMessage(text=msg)
-#         )
-#     pass

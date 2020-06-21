@@ -1,7 +1,7 @@
 # -*- coding: UTF-8 -*-
-'''
+"""
 Templates for replying messages, reduce the dirtiness of the responder
-'''
+"""
 import pickle
 import traceback
 
@@ -26,6 +26,7 @@ T = ["有", "要", "有喔", "有阿", "好", "好喔", "好阿", "可",
 F = ["沒有", "不要", "不", "沒", "No", "無", "否"
      "不用", "曾經有", "曾經", "以前有", "以前", "不是"]
 
+
 def tf_template(msg):
     return TemplateSendMessage(
         alt_text=msg,
@@ -34,12 +35,12 @@ def tf_template(msg):
             text=" ",
             actions=[
                 MessageTemplateAction(
-                    label='有',
-                    text='有'
+                    label="有",
+                    text="有"
                 ),
                 MessageTemplateAction(
-                    label='沒有',
-                    text='沒有'
+                    label="沒有",
+                    text="沒有"
                 )
             ]
         )
@@ -54,12 +55,12 @@ def yn_template(msg):
             text=" ",
             actions=[
                 MessageTemplateAction(
-                    label='是',
-                    text='是'
+                    label="是",
+                    text="是"
                 ),
                 MessageTemplateAction(
-                    label='不是',
-                    text='不是'
+                    label="不是",
+                    text="不是"
                 )
             ]
         )
@@ -74,12 +75,12 @@ def want_template(msg):
             text=" ",
             actions=[
                 MessageTemplateAction(
-                    label='要',
-                    text='要'
+                    label="要",
+                    text="要"
                 ),
                 MessageTemplateAction(
-                    label='不要',
-                    text='不要'
+                    label="不要",
+                    text="不要"
                 )
             ]
         )
@@ -88,6 +89,7 @@ def want_template(msg):
 ##############################
 # Registration Template
 ##############################
+
 
 registration_err_msg = {
     "r0": "請輸入您的中文姓名（e.g. 王小明）",
@@ -99,6 +101,7 @@ registration_greeting = "初次見面，請輸入您的中文姓名（e.g. 王�
 registration_birthday = "請輸入您的生日（年年年年月月日日）"
 
 registration_successful = "註冊成功啦"
+
 
 def registration_err(status="r0"):
     return "不好意思，您的輸入不符格式。\n" + registration_err_msg[status]
@@ -149,7 +152,7 @@ qa_list = [
 ]
 
 # Get question embeddings
-with open('embeddings/question.pickle', 'rb') as f:
+with open("embeddings/question.pickle", "rb") as f:
     question_embeddings = pickle.load(f)
 
 qa_greeting = "你好，請問我可以如何幫你？\n（小弟目前還在學習中，請多多指教～）"
@@ -162,14 +165,16 @@ qa_thanks = "感謝你的回饋。"
 
 qa_sorry = "不好意思，目前沒辦法回應你的需求。我們會再改進～"
 
+
 def qa_response(idx):
     return (
-        '你想問的問題可能是:\n"' +
+        "你想問的問題可能是:\n\"" +
         qa_list[idx]["question"] +
-        '"\n\n我們的回答是:\n"' +
+        "\"\n\n我們的回答是:\n\"" +
         qa_list[idx]["answer"] +
-        '"'
+        "\""
     )
+
 
 def qa_template():
     return TemplateSendMessage(
@@ -203,6 +208,7 @@ def qa_template():
 ##############################
 # Scenario 1: High Temp Templates
 ##############################
+
 
 symptoms_list = [
     {
@@ -249,6 +255,7 @@ high_temp_asap = "請盡快至您熟悉方便的醫療院所就醫。"
 
 high_temp_unknown = "不好意思，我不明白你的意思…"
 
+
 def flu_info():
     return "\n".join([
         "流感併發重症",
@@ -257,11 +264,13 @@ def flu_info():
         "https://www.cdc.gov.tw/Disease/SubIndex/8Yt_gKjz-BEr3QJZGOa0fQ"
     ])
 
+
 def dengue_info():
     return "\n".join([
         "登革熱",
         "https://www.cdc.gov.tw/Disease/SubIndex/WYbKe3aE7LiY5gb-eA8PBw"
     ])
+
 
 def symptoms_template():
     return TemplateSendMessage(
@@ -292,9 +301,11 @@ def symptoms_template():
         )
     )
 
+
 def get_nearby_clinic(address):
     try:
-        candidates = gmaps.places(query=f"{address} 內科 耳鼻喉", language="zh-TW")["results"]
+        candidates = gmaps.places(
+            query=f"{address} 內科 耳鼻喉", language="zh-TW")["results"]
         # send the nearby clinic to user
         if len(candidates) != 0:
             return LocationSendMessage(

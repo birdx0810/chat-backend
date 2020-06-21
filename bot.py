@@ -1,11 +1,9 @@
 # -*- coding: UTF-8 -*-
 # Import system modules
-import datetime
+from datetime import timedelta, datetime
+import json
 import os
-import random
-import string
 import traceback
-import pickle
 
 # Import 3rd-Party Dependencies
 import flask
@@ -13,7 +11,7 @@ from flask_cors import CORS
 from flask import (
     Flask, abort, request
 )
-from flask_socketio import SocketIO
+from flask_socketio import SocketIO, ConnectionRefusedError
 from werkzeug.serving import WSGIRequestHandler
 
 from linebot import (
@@ -23,7 +21,7 @@ from linebot.exceptions import (
     InvalidSignatureError
 )
 from linebot.models import (
-    MessageEvent, TextMessage, TextSendMessage
+    MessageEvent, TextMessage
 )
 
 # Import local modules
@@ -36,10 +34,15 @@ import environment
 # Application & variable initialization
 ##############################
 # Initialize Flask
-app = Flask(__name__)
-cors = CORS(app, resources={r"/foo": {"origins": "*"}})
-app.config['CORS_HEADERS'] = 'Content-Type'
-socketio = SocketIO(app, async_mode='eventlet', cors_allowed_origins='*')
+app = Flask(__name__, static_folder=None)
+cors = CORS(app, resources={
+    r"/login": {"Access-Control-Allow-Credentials": True},
+    r"/users": {"Access-Control-Allow-Credentials": True},
+    r"/messages": {"Access-Control-Allow-Credentials": True},
+    r"/send": {"Access-Control-Allow-Credentials": True}
+})
+app.config["SERVER_NAME"] = "bird.ikmlab.csie.ncku.edu.tw"
+socketio = SocketIO(app, async_mode="eventlet", cors_allowed_origins="*")
 
 WSGIRequestHandler.protocol_version = "HTTP/1.1"
 
@@ -53,14 +56,15 @@ line_bot_api = LineBotApi(keys[0])
 handler = WebhookHandler(keys[1])
 
 ##############################
-# Callback API
+# Callback API (LINE)
 ##############################
 # Listen to all POST requests from HOST/callback
 
-@app.route("/callback", methods=['POST'])
+
+@app.route("/callback", methods=["POST"])
 def callback():
     # get X-Line-Signature header value
-    signature = request.headers['X-Line-Signature']
+    signature = request.headers["X-Line-Signature"]
     # get request body as text
     body = request.get_data(as_text=True)
     # app.logger.info("Request body: " + body)
@@ -70,10 +74,11 @@ def callback():
     except InvalidSignatureError:
         print("Invalid signature. Please check your channel access token/channel secret.")
         abort(400)
-    return 'OK'
+    return "OK"
 
 # API for triggering event.high_temp case
-# Accepts a json file with line_id and
+# Accepts a json file with user name and birth
+
 
 @app.route("/event_high_temp", methods=["POST"])
 def high_temp():
@@ -101,27 +106,13 @@ def high_temp():
     return "OK"
 
 #########################
-# Scenario 2
-#########################
-
-# @app.route("/event_push_news")
-# def push_news():
-#     users = session.get_users()
-#     for user_id in users:
-#         print(f'User: {user_id}')
-#         stat = 's2s0'
-#         session.switch_status(user_id, stat)
-#         responder.push_news(user_id)
-#     pass
-
-#########################
 # Frontend API
 #########################
 
-@app.route("/users", methods=['POST'])
-# @cross_origin(origin='*',headers=['Content-Type','Authorization'])
+
+@app.route("/users", methods=["POST"])
 def get_user():
-    '''
+    """
     - input: none
     - output:
         array[{
@@ -130,37 +121,37 @@ def get_user():
             last_content,     //最後一個訊息的內容
             timestamp,        //最後一個訊息的時間
         }]
-    '''
+    """
     # TODO: Verify request from frontend (Call function)
     try:
         data = request.get_json(force=True)
-        token = data["auth_token"]
-        if not auth_valid(token):
+        token = data["token"]
+        if db.check_login(token=token) is None:
             raise ValueError(f"Invalid token {token}")
     except Exception as err:
         print(err)
         print(traceback.format_exc())
-        return abort(403, 'Forbidden: Authentication is bad')
+        return abort(403, "Forbidden: Authentication is bad")
 
     users = db.get_users()
     temp = []
 
-    for user_id, user_name in users:
-        last_msg, timestamp = db.get_last_message(user_id=user_id)
+    for user in users:
+        last_msg, timestamp = db.get_last_message(user_id=user["user_id"])
         temp.append({
-            "user_id": user_id,
-            "user_name": user_name,
+            "user_id": user["user_id"],
+            "user_name": user["user_name"],
             "last_content": last_msg,
             "timestamp": timestamp
         })
 
-    response = flask.Response(str(temp))
-    response.headers['Access-Control-Allow-Origin'] = '*'
+    response = flask.Response(json.dumps(temp))
     return response
 
-@app.route("/messages", methods=['POST'])
+
+@app.route("/messages", methods=["POST"])
 def get_old_msgs():
-    '''
+    """
     - input:
         - user_id: string
         - timestamp_offset: timestamp
@@ -174,209 +165,148 @@ def get_old_msgs():
             content,
             timestamp,
         }]
-    '''
+    """
 
-    data = request.get_json(force=True)
     try:
-        token = data["auth_token"]
-        if not auth_valid(token):
+        data = request.get_json(force=True)
+
+        token = data["token"]
+
+        if db.check_login(token=token) is None:
             raise ValueError(f"Invalid token {token}")
+
+        user_id = data["user_id"]
+        offset = data["timestamp_offset"]
+        max_amount = data["max_amount"]
+
+        user_name = db.get_user_name(user_id=user_id)
+
+        messages = db.get_messages(
+            max_amount=max_amount,
+            offset=offset,
+            user_id=user_id
+        )
+        temp = []
+
+        for message in messages:
+            temp.append({
+                "msg_id": message["msg_id"],
+                "user_name": user_name,
+                "content": message["message"],
+                "direction": message["direction"],
+                "timestamp": message["timestamp"],
+            })
+
+        response = flask.Response(json.dumps(temp))
+        return response
     except Exception as err:
         print(err)
         print(traceback.format_exc())
         return abort(403, "Forbidden: Authentication is bad")
 
-    user_id = data["user_id"]
-    offset = data["timestamp_offset"]
-    max_amount = data["max_amount"]
 
-    messages = db.get_messages(user_id=user_id)
-    filtered = []
-
-    # Get offset time (-1 == now)
-    if offset == -1:
-        offset = datetime.datetime.now().timestamp()
-    elif isinstance(offset, str):
-        offset = float(offset)
-        # offset = datetime.datetime.fromtimestamp(offset)
-
-    # Filter messages that are > timestamp
-    for message in messages:
-        message = list(message)
-        # message[4] = datetime.datetime.fromtimestamp(float(message[4]))
-        if float(message[4]) < offset:
-            filtered.append(message)
-
-    temp = []
-
-    if len(filtered) >= max_amount:
-        for count in range(max_amount):
-            temp.append({
-                "msg_id": filtered[count][0],
-                "user_id": user_id,
-                "user_name": db.get_user_name(user_id=filtered[count][1]),
-                "content": filtered[count][2],
-                "direction": filtered[count][3],
-                "timestamp": filtered[count][4],
-            })
-    else:
-        for message in filtered:
-            temp.append({
-                "msg_id": message[0],
-                "user_name": db.get_user_name(user_id=message[1]),
-                "content": message[2],
-                "direction": message[3],
-                "timestamp": message[4],
-            })
-
-    response = flask.Response(str(temp))
-    response.headers['Access-Control-Allow-Origin'] = '*'
-    return response
-
-@app.route("/send", methods=['POST'])
+@app.route("/send", methods=["POST"])
 def send_msg():
     try:
         data = request.get_json(force=True)
     except Exception as err:
         print(err)
         print(traceback.format_exc())
-        return abort(400, 'Bad Request: Error parsing to `json` format')
+        return abort(400, "Bad Request: Error parsing to `json` format")
+
     try:
-        token = data["auth_token"]
-        if not auth_valid(token):
+        token = data["token"]
+        if db.check_login(token=token) is None:
             raise ValueError(f"Invalid token {token}")
     except Exception as err:
         print(err)
         print(traceback.format_exc())
-        return abort(403, 'Forbidden: Authentication is bad')
-
-    user_id = data["user_id"]
-    message = data["message"]
+        return abort(403, "Forbidden: Authentication is bad")
 
     try:
-        message = TextSendMessage(text=message)
-        line_bot_api.push_message(user_id, message)
+        user_id = data["user_id"]
+        message = data["message"]
+
+        responder.send_text(
+            event=None,
+            message=message,
+            socketio=socketio,
+            user_id=user_id
+        )
     except Exception as err:
         print(err)
         print(traceback.format_exc())
         return abort(400, "Bad request: invalid message")
 
-    frontend_data = {
-        "user_name": db.get_user_name(user_id=user_id),
-        "user_id": user_id,
-        "content": data["message"],
-        "direction": 1,
-    }
+    return flask.Response("OK", status=200)
 
-    db.log(
-        direction=1,
-        message=data["message"],
-        user_id=user_id
-    )
 
-    print(f"SOCKET: Sending to Front-End\n{data['message']}")
-    socketio.emit('Message', frontend_data, json=True, broadcast=True)
-    print("SOCKET: Emitted to Front-End")
+@app.route("/login", methods=["POST", "OPTIONS"])
+def login():
+    if request.method == "OPTIONS":
+        return flask.Response(status=200)
 
-    response = flask.Response("OK")
-    response.headers['Access-Control-Allow-Origin'] = '*'
-    return response
+    token = None
+    user_name = None
+    password = None
 
-# @app.route("/broadcast", methods=['POST'])
-# def broadcast_msg():
-#     users = db.get_users()
-#     for user in users:
-#         send_msg()
-
-@app.route("/login", methods=['POST'])
-def log_in():
     try:
         data = request.get_json(force=True)
-        username = data["username"]
-        psw = data["password"]
+
+        if "token" in data:
+            token = data["token"]
+        else:
+            user_name = data["username"]
+            password = data["password"]
     except Exception as err:
         print(err)
         print(traceback.format_exc())
-        response = flask.Response(status=400)
-        return response
+        return flask.Response(status=400)
 
-    result = db.get_admin()
-    for res in result:
-        if res[1] == psw:
-            success = True
-            break
-        else:
-            success = False
+    token = db.check_login(
+        user_name=user_name,
+        password=password,
+        token=token
+    )
 
-    if success:
-        token = find_token_of_admin(username)
-        if token is None:
-            token = generate_token(username)
-        response = flask.Response(response=token, status=200)
+    if token is None:
+        return abort(401)
 
-    elif not success:
-        response = flask.Response(status=401)
+    response = flask.Response(token, status=200)
 
-    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.set_cookie(
+        key="token",
+        value=token,
+        max_age=int(timedelta(days=30).total_seconds()),
+        expires=datetime.now() + timedelta(days=30),
+        path="/",
+        domain="bird.ikmlab.csie.ncku.edu.tw/"
+    )
+
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Headers"] = "*"
+
     return response
-
-#########################
-# Authentication variables and functions
-#########################
-
-auths = {}
-
-def generate_token(username):
-    size = 15
-    token = ''.join(random.choices(
-        string.ascii_uppercase + string.digits, k=size))
-    auths[token] = username
-    return token
-
-def find_token_of_admin(username):
-    for token, value in auths.items():
-        if value == username:
-            return token
-    return None
-
-def auth_valid(token):
-    if len(auths.keys()) > 0:
-        for key in auths:
-            if key == token:
-                return True
-
-    return False
-
-# TODO: Save when signal interrupted
-
-def save_auths():
-    path = "session/admin.pickle"
-    with open(path, "wb") as fb:
-        pickle.dump(auths, fb)
-
-def get_auths():
-    path = "session/admin.pickle"
-    with open(path, "rb") as fb:
-        pickle.load(fb)
 
 #########################
 # socket connection
 #########################
 
-@socketio.on('connect', namespace="/")
+
+@socketio.on("connect", namespace="/")
 def handle_connection():
     try:
-        token = request.args.get('auth_token')
-        if not auth_valid(token):
-            raise ValueError(f"Invalid token {token}")
-        print('SOCKET: Connected')
-        socketio.emit('Response', {"data": "OK"}, broadcast=True)
-        print('SOCKET: Emitted')
-        return
+        token = request.args.get("token")
+
+        if db.check_login(token=token) is None:
+            raise ConnectionRefusedError(f"Invalid token {token}")
+        print("SOCKET: Connected")
+        socketio.emit("Response", {"data": "OK"}, broadcast=True)
+        print("SOCKET: Emitted")
     except Exception as err:
         print(err)
         print(traceback.format_exc())
-        return abort(403, 'Forbidden: Authentication is bad')
+        return False
 
 
 @socketio.on_error()
@@ -387,12 +317,14 @@ def error_handler_chat(err):
 # Message handler
 ##############################
 # Text message handler
+
+
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
-    '''
+    """
     Pass id, msg, and session into event function and return updated status
     Respond to user according to new status
-    '''
+    """
     # Print event metadata
     # print(event)
 
@@ -410,9 +342,9 @@ def handle_message(event):
         status = db.get_status(user_id=user_id)
 
     # Log user metadata
-    print(f'\nUser: {user_id}')
-    print(f'Message: {user_msg}')
-    print(f'Status: {status}\n')
+    print(f"\nUser: {user_id}")
+    print(f"Message: {user_msg}")
+    print(f"Status: {status}\n")
 
     # Send user message to frontend
     responder.send_frontend(
@@ -444,7 +376,7 @@ def handle_message(event):
         )
 
     # User trigger QA
-    elif status == "s" and user_msg == '/qa':
+    elif status == "s" and user_msg == "/qa":
         status = "qa0"
         db.update_status(
             status=status,
@@ -482,18 +414,20 @@ def handle_message(event):
             user_id=user_id
         )
 
-    #########################
-    # TODO: User in scenario 2
-    #########################
-    # elif status in ["s2s1", "s2s2", "s2s3"]:
-    #     status = e.push_news(user_id, user_msg, session)
-    #     responder.push_news(event, session)
+
+@app.after_request
+def allow_cors(response):
+    response.headers["Access-Control-Allow-Credentials"] = "true"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Set-Cookie, *"
+    response.headers["Access-Control-Allow-Origin"] = "http://localhost:19006"
+    return response
 
 ##############################
 # Main function
 ##############################
 
+
 if __name__ == "__main__":
     # Setup host port
-    port = int(os.environ.get('PORT', 8080))
-    socketio.run(app, host='0.0.0.0', port=port, debug=True)
+    port = int(os.environ.get("PORT", 8080))
+    socketio.run(app, host="0.0.0.0", port=port, debug=True)

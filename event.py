@@ -1,11 +1,11 @@
 # -*- coding: UTF-8 -*-
-'''
+"""
 The script for event (status) handling and check for msg errors
 - Scene R: Registration
 - Scene QA: Customer Service
 - Scene 1: High Temperature Detected
 - Scene 2: Push Disease News
-'''
+"""
 # Import required modules
 from datetime import datetime
 import re
@@ -36,25 +36,25 @@ handler = WebhookHandler(keys[1])
 
 
 def registration(message=None, status=None, user_id=None):
-    '''
+    """
     This is the main function for the registration flow
     Updates the sessionion dictionary and returns status of user
-    '''
+    """
 
     message = message.strip()
 
     # New user_id detected (not in session)
-    if status == 'r':
-        return db.update_status(status='r0', user_id=user_id)
+    if status == "r":
+        return db.update_status(status="r0", user_id=user_id)
 
     # Get user Chinese name
-    if status == 'r0':
-        if 0 < len(message) <= 20 and re.match(r'[\u4e00-\u9fff]{1,20}', message):
+    if status == "r0":
+        if 0 < len(message) <= 20 and re.match(r"[\u4e00-\u9fff]{1,20}", message):
             db.update_user_name(user_id=user_id, user_name=message)
             return "r1"
         return "r_err"
     # Get user birthday
-    if status == 'r1':
+    if status == "r1":
         # Try parsing string to integer
         try:
             if len(message) != 8:
@@ -81,13 +81,12 @@ def registration(message=None, status=None, user_id=None):
 
 
 def qa(event=None, status=None):
-    '''
+    """
     Event handler for QA
-    '''
+    """
 
     user_id = event.source.user_id
     message = event.message.text
-
 
     if status == "qa0":
         return db.update_status(status="qa1", user_id=user_id)
@@ -102,15 +101,17 @@ def qa(event=None, status=None):
     if status == "qa2_f":
         return db.update_status(status="qa3", user_id=user_id)
 
+    raise ValueError(f"Invalid status code: {status}")
+
 ##############################
 # Scenario 1: Detected high temperature from user smart-band
 ##############################
-# TODO: change inputs
+
 
 def high_temp(event=None, status=None):
-    '''
+    """
     High temperature event handler and push message
-    '''
+    """
     if event is None:
         raise ValueError("Event must not be None")
 
@@ -118,7 +119,7 @@ def high_temp(event=None, status=None):
     message = event.message.text
 
     if status == "s1s0":
-        # TODO: # API triggered, will ask if not feeling well (T/F reply)
+        # API triggered, will ask if not feeling well (T/F reply)
         if message in templates.T:
             return db.update_status(status="s1s1", user_id=user_id)
         if message in templates.F:
@@ -144,21 +145,3 @@ def high_temp(event=None, status=None):
         return db.update_status(status="s1s3", user_id=user_id)
 
     raise ValueError(f"Invalid status: {status}")
-
-##############################
-# Scenario 2: Push news to user from CDC.gov.tw
-##############################
-
-# def push_news():
-#     # TODO: Prerequisites - Run crawler at specific time
-#     # TODO: Push news flow
-
-#     # 2. If there is news, push news and ask for location
-#     # if news:
-#     entities = ner_wrapper(msg)
-#     entities = "\n".join(set(entities))
-#     pass
-
-if __name__ == "__main__":
-    key = environment.get_key("production")
-    print(key)
