@@ -11,9 +11,11 @@ import mysql.connector as mariadb
 import environment
 
 # Is development or production
-config = environment.get_database_config(environment.environment.get_env())
+config = environment.get_database_config()
 
 # Function factory
+
+
 def query_one(qry, var):
     """
     Function for executing `SELECT * FROM table WHERE var0=foo, var1=bar`
@@ -292,7 +294,8 @@ def check_login(user_name=None, password=None, token=None):
     result = query_one(qry_1, (token,))
 
     if result is not None:
-        expired = datetime.now().timestamp() - result["timestamp"] > timedelta(days=30).total_seconds()
+        expired = datetime.now().timestamp() - \
+            result["timestamp"] > timedelta(days=30).total_seconds()
 
         if expired:
             qry_2 = """

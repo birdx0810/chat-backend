@@ -35,8 +35,6 @@ import environment
 ##############################
 
 config = environment.get_server_config()
-environment.environment.set_env(config["mode"])
-environment.environment.lock()
 
 # Initialize Flask
 app = Flask(__name__, static_folder=None)
@@ -51,7 +49,7 @@ socketio = SocketIO(app, async_mode="eventlet", cors_allowed_origins="*")
 
 WSGIRequestHandler.protocol_version = "HTTP/1.1"
 
-keys = environment.get_key(environment.environment.get_env())
+keys = environment.get_key()
 # Channel Access Token
 line_bot_api = LineBotApi(keys[0])
 # Channel Secret
@@ -347,12 +345,10 @@ def handle_message(event):
                 user_id=user_id
             )
 
-
     # Log user metadata
     print(f"\nUser: {user_id}")
     print(f"Message: {user_msg}")
     print(f"Status: {status}\n")
-
 
     # Log user message to database
     db.log(

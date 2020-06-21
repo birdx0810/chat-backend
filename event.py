@@ -24,7 +24,7 @@ import environment
 sys.path.insert(0, os.path.dirname(
     os.path.realpath(__file__)) + "/./ChineseNER")
 
-keys = environment.get_key(environment.environment.get_env())
+keys = environment.get_key()
 # Channel Access Token
 line_bot_api = LineBotApi(keys[0])
 # Channel Secret

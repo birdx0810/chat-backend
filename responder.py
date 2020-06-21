@@ -30,7 +30,7 @@ import templates
 # Application & variable initialization
 ##############################
 
-keys = environment.get_key(environment.environment.get_env())
+keys = environment.get_key()
 # Channel Access Token
 line_bot_api = LineBotApi(keys[0])
 # Channel Secret
@@ -95,7 +95,6 @@ def send_text(event=None, message=None, socketio=None, user_id=None):
     )
 
 
-
 def send_template(event=None, socketio=None, template=None, user_id=None):
     """
     This function wraps the utilties for logging and sending templates
@@ -134,7 +133,6 @@ def send_template(event=None, socketio=None, template=None, user_id=None):
     )
 
 
-
 def send_location(event=None, location=None, socketio=None, user_id=None):
     # Save user message to DB (messages to user == 1)
     timestamp = db.log(
@@ -159,7 +157,6 @@ def send_location(event=None, location=None, socketio=None, user_id=None):
         print(traceback.format_exc())
         print("Failed to send message to LINE")
 
-
     send_frontend(
         direction=1,
         message=location.title + "\n" + location.address,
@@ -167,7 +164,6 @@ def send_location(event=None, location=None, socketio=None, user_id=None):
         timestamp=timestamp,
         user_id=user_id
     )
-
 
 
 def registration(event=None, socketio=None, status=None):
