@@ -21,7 +21,8 @@ from linebot.exceptions import (
     InvalidSignatureError
 )
 from linebot.models import (
-    MessageEvent, TextMessage
+    MessageEvent, TextMessage, StickerMessage,
+    ImageMessage, VideoMessage, AudioMessage
 )
 
 # Import local modules
@@ -417,6 +418,53 @@ def handle_message(event):
             user_id=user_id
         )
 
+@handler.add(MessageEvent, message=StickerMessage)
+def handle_sticker(event):
+    # retrieve user metadata
+    user_id = event.source.user_id
+
+    responder.send_text(
+        event=None,
+        message="[Sticker] received from user",
+        socketio=socketio,
+        user_id=user_id
+    )
+
+@handler.add(MessageEvent, message=ImageMessage)
+def handle_image(event):
+    # retrieve user metadata
+    user_id = event.source.user_id
+
+    responder.send_text(
+        event=None,
+        message="[Image] received from user",
+        socketio=socketio,
+        user_id=user_id
+    )
+
+@handler.add(MessageEvent, message=VideoMessage)
+def handle_video(event):
+    # retrieve user metadata
+    user_id = event.source.user_id
+
+    responder.send_text(
+        event=None,
+        message="[Video] received from user",
+        socketio=socketio,
+        user_id=user_id
+    )
+
+@handler.add(MessageEvent, message=AudioMessage)
+def handle_audio(event):
+    # retrieve user metadata
+    user_id = event.source.user_id
+
+    responder.send_text(
+        event=None,
+        message="[Audio] received from user",
+        socketio=socketio,
+        user_id=user_id
+    )
 
 @app.after_request
 def allow_cors(response):
