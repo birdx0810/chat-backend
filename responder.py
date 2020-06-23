@@ -536,3 +536,13 @@ def high_temp(event=None, message=None, socketio=None, status=None, user_id=None
             )
 
         db.update_status(status="s", user_id=user_id)
+
+
+def wait(event=None, message=None, socketio=None, status=None, user_id=None):
+
+    send_text(
+        event=event,
+        message=templates.system_wait_admin,
+        socketio=socketio,
+        user_id=user_id
+    )

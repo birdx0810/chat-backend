@@ -27,6 +27,8 @@ system_video_message = "[[使用者傳送了影片]]"
 
 system_audio_message = "[[使用者傳送了語音訊息]]"
 
+system_wait_admin = "感謝您使用 HEARThermo 2.0。\n我們已收到您的訊息，客服會儘快與您聯繫。\n提醒您可以使用選單或輸入 /qa 進行簡單問答。"
+
 ##############################
 # Multi purpose templates
 ##############################
@@ -163,38 +165,42 @@ qa_list = [
     }
 ]
 
+qa_trigger = [
+    "/qa",
+]
+
 # Get question embeddings
 with open("embeddings/question.pickle", "rb") as f:
     question_embeddings = pickle.load(f)
 
-qa_greeting = "你好，請問我可以如何幫你？\n（小弟目前還在學習中，請多多指教～）"
+qa_greeting = "您好，請問我可以如何幫您？\n（小弟目前還在學習中，請多多指教～）"
 
-qa_check_is_helpful = "請問是否是你想要問的問題嗎？"
+qa_check_is_helpful = "請問是否是您想要問的問題嗎？"
 
-qa_unknown = "不好意思，我不明白你的意思…"
+qa_unknown = "不好意思，我不明白您的意思…"
 
-qa_thanks = "感謝你的回饋。"
+qa_thanks = "感謝您的回饋。"
 
-qa_sorry = "不好意思，目前沒辦法回應你的需求。我們會再改進～"
+qa_sorry = "不好意思，目前沒辦法回應您的需求。我們會再改進～"
 
 
 def qa_response(idx):
     return (
-        "你想問的問題可能是:\n\"" +
+        "您想問的問題可能是:\n「" +
         qa_list[idx]["question"] +
-        "\"\n\n我們的回答是:\n\"" +
+        "」\n\n我們的回答是:\n「" +
         qa_list[idx]["answer"] +
-        "\""
+        "」"
     )
 
 
 def qa_template():
     return TemplateSendMessage(
-        alt_text="不好意思，請問以下有您想要問的問題嗎？\n若沒有，請輸入\"無\"。",
+        alt_text="不好意思，請問以下有您想要問的問題嗎？\n若沒有，請輸入「無」。",
         template=CarouselTemplate(
             columns=[
                 CarouselColumn(
-                    title="不好意思，請問以下有您想要問的問題嗎？若沒有，請輸入\"無\"。",
+                    title="不好意思，請問以下有您想要問的問題嗎？若沒有，請輸入「無」。",
                     text=" ",
                     actions=[
                         MessageAction(
@@ -204,7 +210,7 @@ def qa_template():
                     ]
                 ),
                 CarouselColumn(
-                    title="不好意思，請問以下有您想要問的問題嗎？若沒有，請輸入\"無\"。",
+                    title="不好意思，請問以下有您想要問的問題嗎？若沒有，請輸入「無」。",
                     text=" ",
                     actions=[
                         MessageAction(
@@ -265,7 +271,7 @@ high_temp_ask_location = "請將您目前的位置傳送給我～"
 
 high_temp_asap = "請盡快至您熟悉方便的醫療院所就醫。"
 
-high_temp_unknown = "不好意思，我不明白你的意思…"
+high_temp_unknown = "不好意思，我不明白您的意思…"
 
 
 def flu_info():
@@ -290,7 +296,7 @@ def symptoms_template():
         template=CarouselTemplate(
             columns=[
                 CarouselColumn(
-                    title="請問您是否有以下的症狀？若無，請輸入\"無\"。",
+                    title="請問您是否有以下的症狀？若無，請輸入「無」。",
                     text=" ",
                     actions=[
                         MessageAction(
@@ -300,7 +306,7 @@ def symptoms_template():
                     ]
                 ),
                 CarouselColumn(
-                    title="請問您是否有以下的症狀？若無，請輸入\"無\"。",
+                    title="請問您是否有以下的症狀？若無，請輸入「無」。",
                     text=" ",
                     actions=[
                         MessageAction(

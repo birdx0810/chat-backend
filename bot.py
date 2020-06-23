@@ -375,8 +375,43 @@ def message_handler(event, message):
             status=status
         )
 
-    # User trigger QA
-    elif status == "s" and message == "/qa":
+    # User trigger predefine QA or want Custom service
+    elif status == "s":
+        if any([
+                keyword in message
+                for keyword in templates.qa_trigger
+        ]):
+            status = "qa0"
+            db.update_status(
+                status=status,
+                user_id=user_id,
+            )
+            responder.qa(
+                event=event,
+                message=message,
+                socketio=socketio,
+                status=status
+            )
+        else:
+            status = "w"
+            db.update_status(
+                status=status,
+                user_id=user_id,
+            )
+            responder.wait(
+                event=event,
+                message=message,
+                socketio=socketio,
+                status=status,
+                user_id=user_id
+            )
+
+    # User trigger predefine QA
+    elif status == "w" and any([
+            keyword in message
+            for keyword in templates.qa_trigger
+    ]):
+
         status = "qa0"
         db.update_status(
             status=status,
