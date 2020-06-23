@@ -16,6 +16,18 @@ import environment
 gmaps = googlemaps.Client(key=environment.get_maps_key())
 
 ##############################
+# System templates
+##############################
+
+system_sticker_message = "[[使用者傳送了貼圖]]"
+
+system_image_message = "[[使用者傳送了圖片]]"
+
+system_video_message = "[[使用者傳送了影片]]"
+
+system_audio_message = "[[使用者傳送了語音訊息]]"
+
+##############################
 # Multi purpose templates
 ##############################
 
@@ -23,7 +35,7 @@ gmaps = googlemaps.Client(key=environment.get_maps_key())
 
 T = ["有", "要", "有喔", "有阿", "好", "好喔", "好阿", "可",
      "可以", "可以阿", "Yes", "有一點", "一點", "一點點", "是"]
-F = ["沒有", "不要", "不", "沒", "No", "無", "否"
+F = ["沒有", "不要", "不", "沒", "No", "無", "否",
      "不用", "曾經有", "曾經", "以前有", "以前", "不是"]
 
 

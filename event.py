@@ -80,13 +80,12 @@ def registration(message=None, status=None, user_id=None):
 ##############################
 
 
-def qa(event=None, status=None):
+def qa(event=None, message=None, status=None):
     """
     Event handler for QA
     """
 
     user_id = event.source.user_id
-    message = event.message.text
 
     if status == "qa0":
         return db.update_status(status="qa1", user_id=user_id)
@@ -99,7 +98,10 @@ def qa(event=None, status=None):
         return "qa1_err"
 
     if status == "qa2_f":
-        return db.update_status(status="qa3", user_id=user_id)
+        if message in templates.F or \
+           message in [qa_obj["question"] for qa_obj in templates.qa_list]:
+            return db.update_status(status="qa3", user_id=user_id)
+        return "qa2_err"
 
     raise ValueError(f"Invalid status code: {status}")
 
@@ -108,7 +110,7 @@ def qa(event=None, status=None):
 ##############################
 
 
-def high_temp(event=None, status=None):
+def high_temp(event=None, message=None, status=None):
     """
     High temperature event handler and push message
     """
@@ -116,7 +118,6 @@ def high_temp(event=None, status=None):
         raise ValueError("Event must not be None")
 
     user_id = event.source.user_id
-    message = event.message.text
 
     if status == "s1s0":
         # API triggered, will ask if not feeling well (T/F reply)

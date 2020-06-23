@@ -208,12 +208,11 @@ def registration(event=None, socketio=None, status=None):
         raise ValueError(f"Invalid status: {status}")
 
 
-def qa(event=None, socketio=None, status=None):
+def qa(event=None, message=None, socketio=None, status=None):
     """
     Reply user according to status
     """
     user_id = event.source.user_id
-    text = event.message.text
 
     if status == "qa0":
         send_text(
@@ -226,11 +225,11 @@ def qa(event=None, socketio=None, status=None):
     elif status == "qa1":
         found = False
         max_idx = 0
-        text = text.lower()
+        message = message.lower()
         # Keyword matching
         for idx, qa_obj in enumerate(templates.qa_list):
             for keyword in qa_obj["keywords"]:
-                if keyword in text:
+                if keyword in message:
                     found = True
                     max_idx = idx
                     break
@@ -238,7 +237,7 @@ def qa(event=None, socketio=None, status=None):
                 break
         # Calculate cosine similarity if no keywords found in sentence
         if not found:
-            query = sentence_encoder.encode([text])
+            query = sentence_encoder.encode([message])
 
             similarity = cosine_similarity(
                 query,                          # 1 x Embedding
@@ -295,17 +294,32 @@ def qa(event=None, socketio=None, status=None):
             user_id=user_id
         )
 
+    elif status == "qa2_err":
+        send_text(
+            event=event,
+            message=templates.qa_unknown,
+            socketio=socketio,
+            user_id=user_id
+        )
+
+        send_template(
+            event=None,
+            socketio=socketio,
+            template=templates.qa_template(),
+            user_id=user_id
+        )
+
     elif status == "qa3":
-        msg = templates.qa_sorry
+        response_msg = templates.qa_sorry
 
         for idx, qa_obj in enumerate(templates.qa_list):
-            if text == qa_obj["question"]:
-                msg = templates.qa_response(idx)
+            if message == qa_obj["question"]:
+                response_msg = templates.qa_response(idx)
                 break
 
         send_text(
             event=event,
-            message=msg,
+            message=response_msg,
             socketio=socketio,
             user_id=user_id
         )
@@ -320,13 +334,10 @@ def qa(event=None, socketio=None, status=None):
         raise ValueError(f"Invalid status: {status}")
 
 
-def high_temp(event=None, socketio=None, status=None, user_id=None):
+def high_temp(event=None, message=None, socketio=None, status=None, user_id=None):
     """
     High temperature event responder
     """
-    # Initialize variables
-    if event is not None:
-        text = event.message.text
 
     # Scene 1:
     # Status 0 - API triggered
@@ -507,7 +518,7 @@ def high_temp(event=None, socketio=None, status=None, user_id=None):
     # Status 4: Return clinic and end scenario
     elif status == "s1s3":
         # Send clinic info and ask to go see doctor ASAP
-        clinic = templates.get_nearby_clinic(text)
+        clinic = templates.get_nearby_clinic(message)
 
         if isinstance(clinic, LocationSendMessage):
             send_location(

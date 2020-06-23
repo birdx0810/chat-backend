@@ -29,6 +29,7 @@ from linebot.models import (
 import database as db
 import event as e
 import responder
+import templates
 import environment
 
 ##############################
@@ -100,6 +101,7 @@ def high_temp():
     status = db.update_status(status="s1s0", user_id=user_id)
     responder.high_temp(
         event=None,
+        message=None,
         socketio=socketio,
         status=status,
         user_id=user_id
@@ -316,20 +318,12 @@ def error_handler_chat(err):
 ##############################
 # Message handler
 ##############################
-# Text message handler
 
 
-@handler.add(MessageEvent, message=TextMessage)
-def handle_message(event):
-    """
-    Pass id, msg, and session into event function and return updated status
-    Respond to user according to new status
-    """
-
-    # Retreive user metadata
+def message_handler(event, message):
+    # Retreive user_id
     user_id = event.source.user_id
-    user_msg = event.message.text
-    # TODO: check timeout
+
     status = db.get_status(user_id=user_id)
     _, timestamp = db.get_last_message(user_id=user_id)
 
@@ -337,7 +331,9 @@ def handle_message(event):
         db.add_user(user_id=user_id)
         status = db.get_status(user_id=user_id)
 
-    if timestamp is not None:
+    # Trigger timeout, only ignore if in registration status
+    if status not in ["r", "r0", "r1", "r_err"] and \
+       timestamp is not None:
         expired = datetime.now().timestamp() - timestamp > timedelta(days=1).total_seconds()
 
         if expired:
@@ -348,13 +344,13 @@ def handle_message(event):
 
     # Log user metadata
     print(f"\nUser: {user_id}")
-    print(f"Message: {user_msg}")
+    print(f"Message: {message}")
     print(f"Status: {status}\n")
 
     # Log user message to database
     db.log(
         direction=0,
-        message=user_msg,
+        message=message,
         user_id=user_id
     )
 
@@ -363,13 +359,13 @@ def handle_message(event):
         direction=0,
         socketio=socketio,
         user_id=user_id,
-        message=user_msg
+        message=message
     )
 
     # User in registration
     if status in ["r", "r0", "r1", "r_err"]:
         status = e.registration(
-            message=user_msg,
+            message=message,
             status=status,
             user_id=user_id
         )
@@ -380,7 +376,7 @@ def handle_message(event):
         )
 
     # User trigger QA
-    elif status == "s" and user_msg == "/qa":
+    elif status == "s" and message == "/qa":
         status = "qa0"
         db.update_status(
             status=status,
@@ -388,6 +384,7 @@ def handle_message(event):
         )
         responder.qa(
             event=event,
+            message=message,
             socketio=socketio,
             status=status
         )
@@ -395,10 +392,12 @@ def handle_message(event):
     elif status in ["qa0", "qa1", "qa2_f"]:
         status = e.qa(
             event=event,
+            message=message,
             status=status
         )
         responder.qa(
             event=event,
+            message=message,
             socketio=socketio,
             status=status
         )
@@ -409,62 +408,72 @@ def handle_message(event):
                     "s1s3", "s1s4"]:
         status = e.high_temp(
             event=event,
+            message=message,
             status=status
         )
         responder.high_temp(
             event=event,
+            message=message,
             socketio=socketio,
             status=status,
             user_id=user_id
         )
 
+# Text message handler
+
+
+@handler.add(MessageEvent, message=TextMessage)
+def handle_message(event):
+    """
+    Pass id, msg, and session into event function and return updated status
+    Respond to user according to new status
+    """
+    # Get user message
+    message_handler(
+        event=event,
+        message=event.message.text
+    )
+
+
 @handler.add(MessageEvent, message=StickerMessage)
 def handle_sticker(event):
-    # retrieve user metadata
-    user_id = event.source.user_id
-
-    responder.send_text(
-        event=None,
-        message="[Sticker] received from user",
-        socketio=socketio,
-        user_id=user_id
+    # Set user message as a hint
+    message_handler(
+        event=event,
+        message=(
+            f"{templates.system_sticker_message}\n" +
+            f"[[package_id={event.message.package_id}]]\n" +
+            f"[[sticker_id={event.message.sticker_id}]]"
+        )
     )
+
 
 @handler.add(MessageEvent, message=ImageMessage)
 def handle_image(event):
     # retrieve user metadata
-    user_id = event.source.user_id
-
-    responder.send_text(
-        event=None,
-        message="[Image] received from user",
-        socketio=socketio,
-        user_id=user_id
+    message_handler(
+        event=event,
+        message=templates.system_image_message
     )
+
 
 @handler.add(MessageEvent, message=VideoMessage)
 def handle_video(event):
     # retrieve user metadata
-    user_id = event.source.user_id
-
-    responder.send_text(
-        event=None,
-        message="[Video] received from user",
-        socketio=socketio,
-        user_id=user_id
+    message_handler(
+        event=event,
+        message=templates.system_video_message
     )
+
 
 @handler.add(MessageEvent, message=AudioMessage)
 def handle_audio(event):
     # retrieve user metadata
-    user_id = event.source.user_id
-
-    responder.send_text(
-        event=None,
-        message="[Audio] received from user",
-        socketio=socketio,
-        user_id=user_id
+    message_handler(
+        event=event,
+        message=templates.system_audio_message
     )
+
 
 @app.after_request
 def allow_cors(response):
