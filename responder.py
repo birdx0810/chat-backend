@@ -36,9 +36,6 @@ line_bot_api = LineBotApi(keys[0])
 # Channel Secret
 handler = WebhookHandler(keys[1])
 
-# Initialize BERT-as-service encoder
-sentence_encoder = BertClient(ip="140.116.245.101")
-
 
 def send_frontend(direction=None, message=None, socketio=None, timestamp=None, user_id=None):
     try:
@@ -64,7 +61,7 @@ def send_text(event=None, message=None, socketio=None, user_id=None):
     event is None:  Push messages
     """
     # Save user message to DB (messages to user == 1)
-    timestamp = db.log(
+    timestamp, _, _ = db.log(
         direction=1,
         message=message,
         user_id=user_id
@@ -102,7 +99,7 @@ def send_template(event=None, socketio=None, template=None, user_id=None):
     """
 
     # Save user message to DB (messages to user == 1)
-    timestamp = db.log(
+    timestamp, _, _ = db.log(
         direction=1,
         message=template.alt_text,
         user_id=user_id
@@ -135,7 +132,7 @@ def send_template(event=None, socketio=None, template=None, user_id=None):
 
 def send_location(event=None, location=None, socketio=None, user_id=None):
     # Save user message to DB (messages to user == 1)
-    timestamp = db.log(
+    timestamp, _, _ = db.log(
         direction=1,
         message=location.title + "\n" + location.address,
         user_id=user_id
@@ -235,15 +232,6 @@ def qa(event=None, message=None, socketio=None, status=None):
                     break
             if found:
                 break
-        # Calculate cosine similarity if no keywords found in sentence
-        if not found:
-            query = sentence_encoder.encode([message])
-
-            similarity = cosine_similarity(
-                query,                          # 1 x Embedding
-                templates.question_embeddings   # #Question x Embedding
-            )[0]  # 1 x #Question
-            max_idx = similarity.argmax()
 
         # Reply answer
         send_text(

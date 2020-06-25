@@ -29,11 +29,20 @@ system_audio_message = "[[使用者傳送了語音訊息]]"
 
 system_wait_admin = "感謝您使用 HEARThermo 2.0。\n我們已收到您的訊息，客服會儘快與您聯繫。\n提醒您可以使用選單或輸入 /qa 進行簡單問答。"
 
+
+def system_senti_scores(message=None, senti_score=None, accum_senti_score=None):
+    return (
+        f"{message}\n" +
+        f"[[情緒分數:    {senti_score:.6f}]]\n" +
+        f"[[累積情緒分數: {accum_senti_score:.6f}]]"
+    )
+
 ##############################
 # Multi purpose templates
 ##############################
 
 # True or false button template
+
 
 T = ["有", "要", "有喔", "有阿", "好", "好喔", "好阿", "可",
      "可以", "可以阿", "Yes", "有一點", "一點", "一點點", "是"]

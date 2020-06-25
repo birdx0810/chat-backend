@@ -9,6 +9,7 @@ import traceback
 import mysql.connector as mariadb
 
 import environment
+import sentiment
 
 # Is development or production
 config = environment.get_database_config()
@@ -78,7 +79,7 @@ def update(qry, var):
     """
     Function for updating DB
     """
-    is_success = False
+    last_row_id = None
     try:
         conn = mariadb.connect(**config)
         conn.autocommit = False
@@ -86,7 +87,7 @@ def update(qry, var):
         try:
             cursor = conn.cursor()
             cursor.execute(qry, var)
-            is_success = True
+            last_row_id = cursor.lastrowid
         except mariadb.Error as err:
             print(err)
             print(traceback.format_exc())
@@ -103,7 +104,7 @@ def update(qry, var):
     finally:
         conn.close()
 
-    return is_success
+    return last_row_id
 
 # Other functions
 
@@ -112,22 +113,71 @@ def log(direction=None, message=None, timestamp=None, user_id=None):
     """
     Log user messages and the replies of bot to DB
     """
-    qry = """
+
+    if timestamp is None:
+        timestamp = datetime.now().timestamp()
+
+    qry1 = """
+        SELECT   mb_logs_analysis.accum_senti_score AS accum_senti_score
+        FROM     mb_logs
+        JOIN     mb_logs_analysis
+        ON       mb_logs.msg_id=mb_logs_analysis.msg_id
+        WHERE    user_id=%s
+        AND      direction=0
+        AND      timestamp >= %s
+        ORDER BY timestamp DESC
+        LIMIT    1;
+    """
+
+    last_accum_senti_score = 0
+
+    # Get previous sentiment score within timeout of 1 day
+    # Queried first to prevent asynchronous updates while logging messages
+    result = query_one(
+        qry1,
+        (
+            user_id,
+            timestamp - timedelta(days=1).total_seconds()
+        )
+    )
+
+    if result is not None:
+        last_accum_senti_score = result["accum_senti_score"]
+
+    qry2 = """
         INSERT INTO mb_logs (user_id, message, direction, timestamp)
         VALUES (%s, %s, %s, %s);
     """
-    if timestamp is None:
-        timestamp = datetime.now().timestamp()
-    update(qry, (user_id, message, direction, timestamp))
 
-    # TODO: Error Notification
+    # Insert message to mb_logs
+    msg_id = update(qry2, (user_id, message, direction, timestamp))
 
+    print(
+        f"Message {'from' if direction == 0 else 'to'} user {user_id} saved to DB")
+
+    # If message was sent from user, perform sentiment analysis
+    # of message and log to database
     if direction == 0:
-        direction = "FROM"
-    elif direction == 1:
-        direction = "TO"
-    print(f"Message {direction} user {user_id} saved to DB")
-    return timestamp
+        # Set score to 0 if not text message to prevent key error
+        if message.startswith("[["):
+            senti_score = 0
+            accum_senti_score = last_accum_senti_score
+        else:
+            # Perform sentiment analysis
+            senti_score = sentiment.liwc(message)
+            accum_senti_score = senti_score + last_accum_senti_score
+            accum_senti_score = min(max(accum_senti_score, -10), 10)
+
+        qry3 = """
+            INSERT INTO mb_logs_analysis (msg_id, senti_score, accum_senti_score)
+            VALUES (%s, %s, %s);
+        """
+
+        # Log message to database
+        update(qry3, (msg_id, senti_score, accum_senti_score))
+        return timestamp, senti_score, accum_senti_score
+
+    return timestamp, None, None
 
 
 def get_users():
@@ -148,11 +198,20 @@ def get_messages(max_amount=None, offset=None, user_id=None):
     Gets all messages from database
     """
     qry = """
-        SELECT msg_id, user_id, message, direction, timestamp
-        FROM mb_logs
-        WHERE user_id=%s
-        ORDER BY timestamp DESC
-        LIMIT %s OFFSET %s;
+        SELECT    mb_logs.msg_id                     AS msg_id,
+                  mb_logs.user_id                    AS user_id,
+                  mb_logs.message                    AS message,
+                  mb_logs.direction                  AS direction,
+                  mb_logs.timestamp                  AS timestamp,
+                  mb_logs_analysis.senti_score       AS senti_score,
+                  mb_logs_analysis.accum_senti_score AS accum_senti_score
+        FROM      mb_logs
+        LEFT JOIN mb_logs_analysis
+        ON        mb_logs.msg_id=mb_logs_analysis.msg_id
+        WHERE     mb_logs.user_id=%s
+        ORDER BY  mb_logs.timestamp DESC
+        LIMIT %s
+        OFFSET %s;
     """
 
     result = query_all(qry, (user_id, max_amount, offset))
@@ -339,7 +398,7 @@ def check_login(user_name=None, password=None, token=None):
 
         is_success = update(qry_5, (token, timestamp, user_name, password))
 
-        if not is_success:
+        if is_success is None:
             return None
 
     return token

@@ -11,7 +11,7 @@ from flask_cors import CORS
 from flask import (
     Flask, abort, request
 )
-from flask_socketio import SocketIO, ConnectionRefusedError
+from flask_socketio import SocketIO
 from werkzeug.serving import WSGIRequestHandler
 
 from linebot import (
@@ -191,6 +191,13 @@ def get_old_msgs():
         temp = []
 
         for message in messages:
+            if message["direction"] == 0:
+                # Send sentiment scores as text to frontend
+                message["message"] = templates.system_senti_scores(
+                    message=message["message"],
+                    senti_score=message["senti_score"],
+                    accum_senti_score=message["accum_senti_score"],
+                )
             temp.append({
                 "user_id": user_id,
                 "user_name": user_name,
@@ -301,7 +308,7 @@ def handle_connection():
         token = request.args.get("token")
 
         if db.check_login(token=token) is None:
-            raise ConnectionRefusedError(f"Invalid token {token}")
+            raise ValueError(f"Invalid token {token}")
         print("SOCKET: Connected")
         socketio.emit("Response", {"data": "OK"}, broadcast=True)
         print("SOCKET: Emitted")
@@ -348,7 +355,7 @@ def message_handler(event, message):
     print(f"Status: {status}\n")
 
     # Log user message to database
-    db.log(
+    _, senti_score, accum_senti_score = db.log(
         direction=0,
         message=message,
         user_id=user_id
@@ -357,9 +364,13 @@ def message_handler(event, message):
     # Send user message to frontend
     responder.send_frontend(
         direction=0,
+        message=templates.system_senti_scores(
+            message=message,
+            senti_score=senti_score,
+            accum_senti_score=accum_senti_score
+        ),
         socketio=socketio,
-        user_id=user_id,
-        message=message
+        user_id=user_id
     )
 
     # User in registration
