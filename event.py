@@ -90,12 +90,19 @@ def qa(event=None, message=None, status=None):
     if status == "qa0":
         return db.update_status(status="qa1", user_id=user_id)
 
-    if status == "qa1":
+    if status == "qa1-1":
         if message in templates.T:
             return db.update_status(status="qa2_t", user_id=user_id)
         if message in templates.F:
             return db.update_status(status="qa2_f", user_id=user_id)
-        return "qa1_err"
+        return "qa1-1_err"
+
+    if status == "qa1-2":
+        if message in templates.T:
+            return db.update_status(status="qa4", user_id=user_id)
+        if message in templates.F:
+            return db.update_status(status="qa2_t", user_id=user_id)
+        return "qa1-2_err"
 
     if status == "qa2_f":
         if message in templates.F or \

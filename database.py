@@ -458,6 +458,7 @@ def message_is_read(timestamp=None, user_id=None):
         return True
     return False
 
+
 def message_require_read(user_id=None):
     qry = """
         UPDATE   mb_logs

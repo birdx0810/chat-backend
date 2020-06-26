@@ -19,11 +19,9 @@ from linebot.models import (
     TextSendMessage, LocationSendMessage
 )
 
-from sklearn.metrics.pairwise import cosine_similarity
-from bert_serving.client import BertClient
-
 import environment
 import database as db
+import similarity
 import templates
 
 ##############################
@@ -38,13 +36,13 @@ handler = WebhookHandler(keys[1])
 
 
 def send_frontend(
-    direction=None,
-    message=None,
-    require_read=False,
-    socketio=None,
-    timestamp=None,
-    user_id=None
-):
+        direction=None,
+        message=None,
+        require_read=False,
+        socketio=None,
+        timestamp=None,
+        user_id=None
+    ):
     try:
         frontend_data = json.dumps([{
             "content": message,
@@ -64,12 +62,12 @@ def send_frontend(
 
 
 def send_text(
-    event=None,
-    message=None,
-    require_read=False,
-    socketio=None,
-    user_id=None
-):
+        event=None,
+        message=None,
+        require_read=False,
+        socketio=None,
+        user_id=None
+    ):
     """
     This function wraps the utilties for logging and sending messages
     event is None:  Push messages
@@ -243,36 +241,47 @@ def qa(event=None, message=None, socketio=None, status=None):
         )
 
     elif status == "qa1":
-        found = False
-        max_idx = 0
-        message = message.lower()
-        # Keyword matching
-        for idx, qa_obj in enumerate(templates.qa_list):
-            for keyword in qa_obj["keywords"]:
-                if keyword in message:
-                    found = True
-                    max_idx = idx
-                    break
-            if found:
-                break
 
-        # Reply answer
-        send_text(
-            event=event,
-            message=templates.qa_response(max_idx),
-            require_read=False,
-            socketio=socketio,
-            user_id=user_id
-        )
+        max_idx = similarity.question(message)
 
-        send_template(
-            event=None,
-            socketio=socketio,
-            template=templates.yn_template(templates.qa_check_is_helpful),
-            user_id=user_id
-        )
+        if max_idx is not None:
+            # Found question and reply answer
+            send_text(
+                event=event,
+                message=templates.qa_response(max_idx),
+                require_read=False,
+                socketio=socketio,
+                user_id=user_id
+            )
 
-    elif status == "qa1_err":
+            send_template(
+                event=None,
+                socketio=socketio,
+                template=templates.yn_template(templates.qa_check_is_helpful),
+                user_id=user_id
+            )
+
+            db.update_status(status="qa1-1", user_id=user_id)
+        else:
+            send_text(
+                event=event,
+                message=templates.qa_sorry,
+                require_read=False,
+                socketio=socketio,
+                user_id=user_id
+            )
+
+            send_template(
+                event=None,
+                socketio=socketio,
+                template=templates.yn_template(
+                    templates.qa_check_custom_service),
+                user_id=user_id
+            )
+
+            db.update_status(status="qa1-2", user_id=user_id)
+
+    elif status == "qa1-1_err":
         send_text(
             event=event,
             message=templates.qa_unknown,
@@ -285,6 +294,22 @@ def qa(event=None, message=None, socketio=None, status=None):
             event=None,
             socketio=socketio,
             template=templates.yn_template(templates.qa_check_is_helpful),
+            user_id=user_id
+        )
+
+    elif status == "qa1-2_err":
+        send_text(
+            event=event,
+            message=templates.qa_unknown,
+            require_read=False,
+            socketio=socketio,
+            user_id=user_id
+        )
+
+        send_template(
+            event=None,
+            socketio=socketio,
+            template=templates.yn_template(templates.qa_check_custom_service),
             user_id=user_id
         )
 
@@ -347,6 +372,16 @@ def qa(event=None, message=None, socketio=None, status=None):
             user_id=user_id
         )
         db.update_status(status="s", user_id=user_id)
+    elif status == "qa4":
+        send_text(
+            event=event,
+            message=templates.system_wait_admin,
+            require_read=True,
+            socketio=socketio,
+            user_id=user_id
+        )
+
+        db.update_status(status="w", user_id=user_id)
     else:
         raise ValueError(f"Invalid status: {status}")
 

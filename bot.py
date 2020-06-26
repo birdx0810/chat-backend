@@ -318,6 +318,7 @@ def login():
 
     return response
 
+
 @app.route("/message_is_read", methods=["POST"])
 def message_is_read():
     try:
@@ -486,7 +487,7 @@ def message_handler(event, message):
             status=status
         )
 
-    elif status in ["qa0", "qa1", "qa2_f"]:
+    elif status in ["qa0", "qa1-1", "qa1-2", "qa2_f"]:
         status = e.qa(
             event=event,
             message=message,

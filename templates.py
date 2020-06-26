@@ -27,7 +27,7 @@ system_video_message = "[[使用者傳送了影片]]"
 
 system_audio_message = "[[使用者傳送了語音訊息]]"
 
-system_wait_admin = "感謝您使用 HEARThermo 2.0。\n我們已收到您的訊息，客服會儘快與您聯繫。\n提醒您可以使用選單或輸入 /qa 進行簡單問答。"
+system_wait_admin = "感謝您使用 HEARThermo 2.0。\n我們已收到您的訊息，客服會儘快與您聯繫。"
 
 
 def system_senti_scores(message=None, senti_score=None, accum_senti_score=None):
@@ -185,6 +185,8 @@ with open("embeddings/question.pickle", "rb") as f:
 qa_greeting = "您好，請問我可以如何幫您？\n（小弟目前還在學習中，請多多指教～）"
 
 qa_check_is_helpful = "請問是否是您想要問的問題嗎？"
+
+qa_check_custom_service = "請問是否需要客服人員與您聯繫？"
 
 qa_unknown = "不好意思，我不明白您的意思…"
 
