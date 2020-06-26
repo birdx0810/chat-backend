@@ -37,14 +37,22 @@ line_bot_api = LineBotApi(keys[0])
 handler = WebhookHandler(keys[1])
 
 
-def send_frontend(direction=None, message=None, socketio=None, timestamp=None, user_id=None):
+def send_frontend(
+    direction=None,
+    message=None,
+    require_read=False,
+    socketio=None,
+    timestamp=None,
+    user_id=None
+):
     try:
         frontend_data = json.dumps([{
-            "user_name": db.get_user_name(user_id=user_id),
-            "user_id": user_id,
             "content": message,
             "direction": direction,
-            "timestamp": timestamp
+            "require_read": require_read,
+            "timestamp": timestamp,
+            "user_id": user_id,
+            "user_name": db.get_user_name(user_id=user_id),
         }])
         print("SOCKET: Sending to Front-End")
         socketio.emit("Message", frontend_data, json=True, broadcast=True)
@@ -55,7 +63,13 @@ def send_frontend(direction=None, message=None, socketio=None, timestamp=None, u
         print("Failed to emit message to frontend")
 
 
-def send_text(event=None, message=None, socketio=None, user_id=None):
+def send_text(
+    event=None,
+    message=None,
+    require_read=False,
+    socketio=None,
+    user_id=None
+):
     """
     This function wraps the utilties for logging and sending messages
     event is None:  Push messages
@@ -66,6 +80,9 @@ def send_text(event=None, message=None, socketio=None, user_id=None):
         message=message,
         user_id=user_id
     )
+
+    if require_read:
+        db.message_require_read(user_id=user_id)
 
     try:
         if event is None:
@@ -86,6 +103,7 @@ def send_text(event=None, message=None, socketio=None, user_id=None):
     send_frontend(
         direction=1,
         message=message,
+        require_read=require_read,
         socketio=socketio,
         timestamp=timestamp,
         user_id=user_id
@@ -174,6 +192,7 @@ def registration(event=None, socketio=None, status=None):
         send_text(
             event=event,
             message=templates.registration_greeting,
+            require_read=False,
             socketio=socketio,
             user_id=user_id
         )
@@ -181,6 +200,7 @@ def registration(event=None, socketio=None, status=None):
         send_text(
             event=event,
             message=templates.registration_birthday,
+            require_read=False,
             socketio=socketio,
             user_id=user_id
         )
@@ -188,6 +208,7 @@ def registration(event=None, socketio=None, status=None):
         send_text(
             event=event,
             message=templates.registration_successful,
+            require_read=False,
             socketio=socketio,
             user_id=user_id
         )
@@ -198,6 +219,7 @@ def registration(event=None, socketio=None, status=None):
             message=templates.registration_err(
                 status=db.get_status(user_id=user_id)
             ),
+            require_read=False,
             socketio=socketio,
             user_id=user_id
         )
@@ -215,6 +237,7 @@ def qa(event=None, message=None, socketio=None, status=None):
         send_text(
             event=event,
             message=templates.qa_greeting,
+            require_read=False,
             socketio=socketio,
             user_id=user_id
         )
@@ -237,6 +260,7 @@ def qa(event=None, message=None, socketio=None, status=None):
         send_text(
             event=event,
             message=templates.qa_response(max_idx),
+            require_read=False,
             socketio=socketio,
             user_id=user_id
         )
@@ -252,6 +276,7 @@ def qa(event=None, message=None, socketio=None, status=None):
         send_text(
             event=event,
             message=templates.qa_unknown,
+            require_read=False,
             socketio=socketio,
             user_id=user_id
         )
@@ -268,6 +293,7 @@ def qa(event=None, message=None, socketio=None, status=None):
         send_text(
             event=event,
             message=templates.qa_thanks,
+            require_read=False,
             socketio=socketio,
             user_id=user_id
         )
@@ -286,6 +312,7 @@ def qa(event=None, message=None, socketio=None, status=None):
         send_text(
             event=event,
             message=templates.qa_unknown,
+            require_read=False,
             socketio=socketio,
             user_id=user_id
         )
@@ -308,12 +335,14 @@ def qa(event=None, message=None, socketio=None, status=None):
         send_text(
             event=event,
             message=response_msg,
+            require_read=False,
             socketio=socketio,
             user_id=user_id
         )
         send_text(
             event=None,
             message=templates.qa_thanks,
+            require_read=False,
             socketio=socketio,
             user_id=user_id
         )
@@ -353,6 +382,7 @@ def high_temp(event=None, message=None, socketio=None, status=None, user_id=None
         send_text(
             event=event,
             message=templates.high_temp_ending,
+            require_read=False,
             socketio=socketio,
             user_id=user_id
         )
@@ -363,6 +393,7 @@ def high_temp(event=None, message=None, socketio=None, status=None, user_id=None
         send_text(
             event=event,
             message=templates.high_temp_unknown,
+            require_read=False,
             socketio=socketio,
             user_id=user_id
         )
@@ -382,6 +413,7 @@ def high_temp(event=None, message=None, socketio=None, status=None, user_id=None
             message=list(filter(
                 lambda symptom: symptom["status"] == status, templates.symptoms_list
             ))[0]["reply"],
+            require_read=False,
             socketio=socketio,
             user_id=user_id
         )
@@ -389,6 +421,7 @@ def high_temp(event=None, message=None, socketio=None, status=None, user_id=None
         send_text(
             event=None,
             message=templates.dengue_info(),
+            require_read=False,
             socketio=socketio,
             user_id=user_id
         )
@@ -407,6 +440,7 @@ def high_temp(event=None, message=None, socketio=None, status=None, user_id=None
             message=list(filter(
                 lambda symptom: symptom["status"] == status, templates.symptoms_list
             ))[0]["reply"],
+            require_read=False,
             socketio=socketio,
             user_id=user_id
         )
@@ -414,6 +448,7 @@ def high_temp(event=None, message=None, socketio=None, status=None, user_id=None
         send_text(
             event=None,
             message=templates.flu_info(),
+            require_read=False,
             socketio=socketio,
             user_id=user_id
         )
@@ -432,6 +467,7 @@ def high_temp(event=None, message=None, socketio=None, status=None, user_id=None
             message=list(filter(
                 lambda symptom: symptom["status"] == status, templates.symptoms_list
             ))[0]["reply"],
+            require_read=False,
             socketio=socketio,
             user_id=user_id
         )
@@ -439,6 +475,7 @@ def high_temp(event=None, message=None, socketio=None, status=None, user_id=None
         send_text(
             event=None,
             message=templates.flu_info()+"\n"+templates.dengue_info(),
+            require_read=False,
             socketio=socketio,
             user_id=user_id
         )
@@ -455,6 +492,7 @@ def high_temp(event=None, message=None, socketio=None, status=None, user_id=None
         send_text(
             event=event,
             message=templates.high_temp_unknown,
+            require_read=False,
             socketio=socketio,
             user_id=user_id
         )
@@ -462,6 +500,7 @@ def high_temp(event=None, message=None, socketio=None, status=None, user_id=None
         send_text(
             event=None,
             message=templates.high_temp_ending,
+            require_read=False,
             socketio=socketio,
             user_id=user_id
         )
@@ -474,6 +513,7 @@ def high_temp(event=None, message=None, socketio=None, status=None, user_id=None
         send_text(
             event=event,
             message=templates.high_temp_ask_location,
+            require_read=False,
             socketio=socketio,
             user_id=user_id
         )
@@ -483,6 +523,7 @@ def high_temp(event=None, message=None, socketio=None, status=None, user_id=None
         send_text(
             event=event,
             message=templates.high_temp_ending,
+            require_read=False,
             socketio=socketio,
             user_id=user_id
         )
@@ -492,6 +533,7 @@ def high_temp(event=None, message=None, socketio=None, status=None, user_id=None
         send_text(
             event=event,
             message=templates.high_temp_unknown,
+            require_read=False,
             socketio=socketio,
             user_id=user_id
         )
@@ -519,6 +561,7 @@ def high_temp(event=None, message=None, socketio=None, status=None, user_id=None
             send_text(
                 event=event,
                 message=clinic,
+                require_read=False,
                 socketio=socketio,
                 user_id=user_id
             )
@@ -531,6 +574,7 @@ def wait(event=None, message=None, socketio=None, status=None, user_id=None):
     send_text(
         event=event,
         message=templates.system_wait_admin,
+        require_read=True,
         socketio=socketio,
         user_id=user_id
     )

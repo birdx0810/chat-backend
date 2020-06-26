@@ -125,31 +125,48 @@ def get_user():
             timestamp,        //最後一個訊息的時間
         }]
     """
-    # TODO: Verify request from frontend (Call function)
     try:
         data = request.get_json(force=True)
+
         token = data["token"]
+
         if db.check_login(token=token) is None:
             raise ValueError(f"Invalid token {token}")
+
+        if "timestamp_offset" in data:
+            offset = data["timestamp_offset"]
+        else:
+            offset = 0
+        if "max_amount" in data:
+            max_amount = data["max_amount"]
+        else:
+            max_amount = 10
+
+        users = db.get_users(
+            max_amount=max_amount,
+            offset=offset
+        )
+
+        temp = []
+
+        for user in users:
+            # convert `is_read` and `require_read` to boolean
+            temp.append({
+                "is_read": user["is_read"] == 1,
+                "last_content": user["message"],
+                "require_read": user["require_read"] == 1,
+                "timestamp": user["timestamp"],
+                "user_id": user["user_id"],
+                "user_name": user["user_name"],
+            })
+
+        response = flask.Response(json.dumps(temp))
+        return response
+
     except Exception as err:
         print(err)
         print(traceback.format_exc())
         return abort(403, "Forbidden: Authentication is bad")
-
-    users = db.get_users()
-    temp = []
-
-    for user in users:
-        last_msg, timestamp = db.get_last_message(user_id=user["user_id"])
-        temp.append({
-            "user_id": user["user_id"],
-            "user_name": user["user_name"],
-            "last_content": last_msg,
-            "timestamp": timestamp
-        })
-
-    response = flask.Response(json.dumps(temp))
-    return response
 
 
 @app.route("/messages", methods=["POST"])
@@ -198,12 +215,15 @@ def get_old_msgs():
                     senti_score=message["senti_score"],
                     accum_senti_score=message["accum_senti_score"],
                 )
+            # convert `is_read` and `require_read` to boolean
             temp.append({
-                "user_id": user_id,
-                "user_name": user_name,
                 "content": message["message"],
                 "direction": message["direction"],
-                "timestamp": message["timestamp"],
+                "is_read": message["is_read"] == 1,
+                "require_read": message["require_read"],
+                "timestamp": message["timestamp"] == 1,
+                "user_id": user_id,
+                "user_name": user_name,
             })
 
         response = flask.Response(json.dumps(temp))
@@ -239,6 +259,7 @@ def send_msg():
         responder.send_text(
             event=None,
             message=message,
+            require_read=False,
             socketio=socketio,
             user_id=user_id
         )
@@ -297,6 +318,35 @@ def login():
 
     return response
 
+@app.route("/message_is_read", methods=["POST"])
+def message_is_read():
+    try:
+        data = request.get_json(force=True)
+
+        token = data["token"]
+
+        if db.check_login(token=token) is None:
+            raise ValueError(f"Invalid token {token}")
+
+        user_id = data["user_id"]
+        timestamp = data["timestamp"]
+
+        ok = db.message_is_read(
+            timestamp=timestamp,
+            user_id=user_id
+        )
+
+        if ok:
+            response = flask.Response(status=200)
+        else:
+            response = flask.Response(status=400)
+        return response
+    except Exception as err:
+        print(err)
+        print(traceback.format_exc())
+        return abort(403, "Forbidden: Authentication is bad")
+
+
 #########################
 # socket connection
 #########################
@@ -332,7 +382,7 @@ def message_handler(event, message):
     user_id = event.source.user_id
 
     status = db.get_status(user_id=user_id)
-    _, timestamp = db.get_last_message(user_id=user_id)
+    timestamp = db.get_last_timestamp(user_id=user_id)
 
     if status is None:
         db.add_user(user_id=user_id)
@@ -369,6 +419,7 @@ def message_handler(event, message):
             senti_score=senti_score,
             accum_senti_score=accum_senti_score
         ),
+        require_read=False,
         socketio=socketio,
         user_id=user_id
     )
