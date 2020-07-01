@@ -19,12 +19,11 @@ from linebot.models import (
     TextSendMessage, LocationSendMessage
 )
 
-from sklearn.metrics.pairwise import cosine_similarity
-from bert_serving.client import BertClient
-
 import environment
 import database as db
+import similarity
 import templates
+import status_code
 
 ##############################
 # Application & variable initialization
@@ -37,14 +36,22 @@ line_bot_api = LineBotApi(keys[0])
 handler = WebhookHandler(keys[1])
 
 
-def send_frontend(direction=None, message=None, socketio=None, timestamp=None, user_id=None):
+def send_frontend(
+        direction=None,
+        message=None,
+        require_read=False,
+        socketio=None,
+        timestamp=None,
+        user_id=None
+    ):
     try:
         frontend_data = json.dumps([{
-            "user_name": db.get_user_name(user_id=user_id),
-            "user_id": user_id,
             "content": message,
             "direction": direction,
-            "timestamp": timestamp
+            "require_read": require_read,
+            "timestamp": timestamp,
+            "user_id": user_id,
+            "user_name": db.get_user_name(user_id=user_id),
         }])
         print("SOCKET: Sending to Front-End")
         socketio.emit("Message", frontend_data, json=True, broadcast=True)
@@ -55,7 +62,13 @@ def send_frontend(direction=None, message=None, socketio=None, timestamp=None, u
         print("Failed to emit message to frontend")
 
 
-def send_text(event=None, message=None, socketio=None, user_id=None):
+def send_text(
+        event=None,
+        message=None,
+        require_read=False,
+        socketio=None,
+        user_id=None
+    ):
     """
     This function wraps the utilties for logging and sending messages
     event is None:  Push messages
@@ -66,6 +79,9 @@ def send_text(event=None, message=None, socketio=None, user_id=None):
         message=message,
         user_id=user_id
     )
+
+    if require_read:
+        db.message_require_read(user_id=user_id)
 
     try:
         if event is None:
@@ -86,6 +102,7 @@ def send_text(event=None, message=None, socketio=None, user_id=None):
     send_frontend(
         direction=1,
         message=message,
+        require_read=require_read,
         socketio=socketio,
         timestamp=timestamp,
         user_id=user_id
@@ -170,34 +187,38 @@ def registration(event=None, socketio=None, status=None):
     # Initialize variables
     user_id = event.source.user_id
 
-    if status == "r0":
+    if status == status_code.registration["ask_user_name"]:
         send_text(
             event=event,
             message=templates.registration_greeting,
+            require_read=False,
             socketio=socketio,
             user_id=user_id
         )
-    elif status == "r1":
+    elif status == status_code.registration["ask_birth_day"]:
         send_text(
             event=event,
             message=templates.registration_birthday,
+            require_read=False,
             socketio=socketio,
             user_id=user_id
         )
-    elif status == "r2":
+    elif status == status_code.registration["end"]:
         send_text(
             event=event,
             message=templates.registration_successful,
+            require_read=False,
             socketio=socketio,
             user_id=user_id
         )
-        db.update_status(status="s", user_id=user_id)
-    elif status == "r_err":
+        db.update_status(status=status_code.high_temp["API_Called"], user_id=user_id)
+    elif status == status_code.registration["error"]:
         send_text(
             event=event,
             message=templates.registration_err(
                 status=db.get_status(user_id=user_id)
             ),
+            require_read=False,
             socketio=socketio,
             user_id=user_id
         )
@@ -211,47 +232,62 @@ def qa(event=None, message=None, socketio=None, status=None):
     """
     user_id = event.source.user_id
 
-    if status == "qa0":
+    if status == status_code.qa["initialization"]:
         send_text(
             event=event,
             message=templates.qa_greeting,
+            require_read=False,
             socketio=socketio,
             user_id=user_id
         )
 
-    elif status == "qa1":
-        found = False
-        max_idx = 0
-        message = message.lower()
-        # Keyword matching
-        for idx, qa_obj in enumerate(templates.qa_list):
-            for keyword in qa_obj["keywords"]:
-                if keyword in message:
-                    found = True
-                    max_idx = idx
-                    break
-            if found:
-                break
+    elif status == status_code.qa["received_question"]:
 
-        # Reply answer
-        send_text(
-            event=event,
-            message=templates.qa_response(max_idx),
-            socketio=socketio,
-            user_id=user_id
-        )
+        max_idx = similarity.question(message)
 
-        send_template(
-            event=None,
-            socketio=socketio,
-            template=templates.yn_template(templates.qa_check_is_helpful),
-            user_id=user_id
-        )
+        if max_idx is not None:
+            # Found question and reply answer
+            send_text(
+                event=event,
+                message=templates.qa_response(max_idx),
+                require_read=False,
+                socketio=socketio,
+                user_id=user_id
+            )
 
-    elif status == "qa1_err":
+            send_template(
+                event=None,
+                socketio=socketio,
+                template=templates.yn_template(templates.qa_check_is_helpful),
+                user_id=user_id
+            )
+
+            db.update_status(status=status_code.qa["found_question"], user_id=user_id)
+        else:
+            # Question not found, ask if need customer service
+            send_text(
+                event=event,
+                message=templates.qa_sorry,
+                require_read=False,
+                socketio=socketio,
+                user_id=user_id
+            )
+
+            send_template(
+                event=None,
+                socketio=socketio,
+                template=templates.yn_template(
+                    templates.qa_check_custom_service),
+                user_id=user_id
+            )
+
+            db.update_status(status=status_code.qa["fail_to_find_question"], user_id=user_id)
+
+    elif status == status_code.qa["found_unknown"]:
         send_text(
             event=event,
             message=templates.qa_unknown,
+            require_read=False,
             socketio=socketio,
             user_id=user_id
         )
@@ -263,18 +299,35 @@ def qa(event=None, message=None, socketio=None, status=None):
             user_id=user_id
         )
 
-    elif status == "qa2_t":
+    elif status == status_code.qa["not_found_unknown"]:
+        send_text(
+            event=event,
+            message=templates.qa_unknown,
+            require_read=False,
+            socketio=socketio,
+            user_id=user_id
+        )
+
+        send_template(
+            event=None,
+            socketio=socketio,
+            template=templates.yn_template(templates.qa_check_custom_service),
+            user_id=user_id
+        )
+
+    elif status == status_code.qa["is_correct_question"]:
 
         send_text(
             event=event,
             message=templates.qa_thanks,
+            require_read=False,
             socketio=socketio,
             user_id=user_id
         )
 
-        db.update_status(status="s", user_id=user_id)
+        db.update_status(status=status_code.system["null_state"], user_id=user_id)
 
-    elif status == "qa2_f":
+    elif status == status_code.qa["not_correct_question"]:
         send_template(
             event=event,
             socketio=socketio,
@@ -282,10 +335,11 @@ def qa(event=None, message=None, socketio=None, status=None):
             user_id=user_id
         )
 
-    elif status == "qa2_err":
+    elif status == status_code.qa["label_unknown"]:
         send_text(
             event=event,
             message=templates.qa_unknown,
+            require_read=False,
             socketio=socketio,
             user_id=user_id
         )
@@ -297,7 +351,7 @@ def qa(event=None, message=None, socketio=None, status=None):
             user_id=user_id
         )
 
-    elif status == "qa3":
+    elif status == status_code.qa["user_label_answer"]:
         response_msg = templates.qa_sorry
 
         for idx, qa_obj in enumerate(templates.qa_list):
@@ -308,16 +362,28 @@ def qa(event=None, message=None, socketio=None, status=None):
         send_text(
             event=event,
             message=response_msg,
+            require_read=False,
             socketio=socketio,
             user_id=user_id
         )
         send_text(
             event=None,
             message=templates.qa_thanks,
+            require_read=False,
             socketio=socketio,
             user_id=user_id
         )
-        db.update_status(status="s", user_id=user_id)
+        db.update_status(status=status_code.system["null_state"], user_id=user_id)
+    elif status == status_code.qa["contact_customer_service"]:
+        send_text(
+            event=event,
+            message=templates.system_wait_admin,
+            require_read=True,
+            socketio=socketio,
+            user_id=user_id
+        )
+
+        db.update_status(status=status_code.system["wait_customer_service"], user_id=user_id)
     else:
         raise ValueError(f"Invalid status: {status}")
 
@@ -329,7 +395,7 @@ def high_temp(event=None, message=None, socketio=None, status=None, user_id=None
 
     # Scene 1:
     # Status 0 - API triggered
-    if status == "s1s0":
+    if status == status_code.high_temp["initialization"]:
         # Detected user high temperature, ask patient well being
         send_template(
             event=None,
@@ -339,7 +405,7 @@ def high_temp(event=None, message=None, socketio=None, status=None, user_id=None
         )
 
     # Status 1 - Ask if feeling sick
-    elif status == "s1s1":
+    elif status == status_code.high_temp["user_not_feeling_well"]:
         # If true (not feeling well), ask for symptoms
         send_template(
             event=None,
@@ -348,21 +414,23 @@ def high_temp(event=None, message=None, socketio=None, status=None, user_id=None
             user_id=user_id
         )
 
-    elif status == "s1f1":
+    elif status == status_code.high_temp["user_feeling_well"]:
         # If false (feeling ok), reply msg
         send_text(
             event=event,
             message=templates.high_temp_ending,
+            require_read=False,
             socketio=socketio,
             user_id=user_id
         )
 
-        db.update_status(status="s", user_id=user_id)
+        db.update_status(status=status_code.system["null_state"], user_id=user_id)
 
-    elif status == "s1s0_err":
+    elif status == status_code.high_temp["user_feeling_unknown"]:
         send_text(
             event=event,
             message=templates.high_temp_unknown,
+            require_read=False,
             socketio=socketio,
             user_id=user_id
         )
@@ -375,13 +443,17 @@ def high_temp(event=None, message=None, socketio=None, status=None, user_id=None
         )
 
     # Status 2 - Ask for symptoms
-    elif status in ["s1d0", "s1d1"]:
+    elif status in [
+        status_code.high_temp["皮膚出疹"],
+        status_code.high_temp["眼窩痛"]
+    ]:
         # If "皮膚出疹" & "眼窩痛" detected
         send_text(
             event=event,
             message=list(filter(
                 lambda symptom: symptom["status"] == status, templates.symptoms_list
             ))[0]["reply"],
+            require_read=False,
             socketio=socketio,
             user_id=user_id
         )
@@ -389,6 +461,7 @@ def high_temp(event=None, message=None, socketio=None, status=None, user_id=None
         send_text(
             event=None,
             message=templates.dengue_info(),
+            require_read=False,
             socketio=socketio,
             user_id=user_id
         )
@@ -400,13 +473,18 @@ def high_temp(event=None, message=None, socketio=None, status=None, user_id=None
             user_id=user_id
         )
 
-    elif status in ["s1d2", "s1d3", "s1d4"]:
+    elif status in [
+        status_code.high_temp["喉嚨痛"],
+        status_code.high_temp["咳嗽"],
+        status_code.high_temp["咳血痰"],
+    ]:
         # If "喉嚨痛" & "咳嗽" & "咳血痰" detected
         send_text(
             event=event,
             message=list(filter(
                 lambda symptom: symptom["status"] == status, templates.symptoms_list
             ))[0]["reply"],
+            require_read=False,
             socketio=socketio,
             user_id=user_id
         )
@@ -414,6 +492,7 @@ def high_temp(event=None, message=None, socketio=None, status=None, user_id=None
         send_text(
             event=None,
             message=templates.flu_info(),
+            require_read=False,
             socketio=socketio,
             user_id=user_id
         )
@@ -425,13 +504,14 @@ def high_temp(event=None, message=None, socketio=None, status=None, user_id=None
             user_id=user_id
         )
 
-    elif status == "s1d5":
+    elif status == status_code.high_temp["肌肉酸痛"]:
         # If "肌肉酸痛" detected
         send_text(
             event=event,
             message=list(filter(
                 lambda symptom: symptom["status"] == status, templates.symptoms_list
             ))[0]["reply"],
+            require_read=False,
             socketio=socketio,
             user_id=user_id
         )
@@ -439,6 +519,7 @@ def high_temp(event=None, message=None, socketio=None, status=None, user_id=None
         send_text(
             event=None,
             message=templates.flu_info()+"\n"+templates.dengue_info(),
+            require_read=False,
             socketio=socketio,
             user_id=user_id
         )
@@ -450,11 +531,12 @@ def high_temp(event=None, message=None, socketio=None, status=None, user_id=None
             user_id=user_id
         )
 
-    elif status == "s1df":
+    elif status == status_code.high_temp["other_symptom"]:
         # If other or no symptoms
         send_text(
             event=event,
             message=templates.high_temp_unknown,
+            require_read=False,
             socketio=socketio,
             user_id=user_id
         )
@@ -462,36 +544,40 @@ def high_temp(event=None, message=None, socketio=None, status=None, user_id=None
         send_text(
             event=None,
             message=templates.high_temp_ending,
+            require_read=False,
             socketio=socketio,
             user_id=user_id
         )
 
-        db.update_status(status="s", user_id=user_id)
+        db.update_status(status=status_code.system["null_state"], user_id=user_id)
 
     # Status 3: Ask for location
-    elif status == "s1s2":
+    elif status == status_code.high_temp["need_clinic_info"]:
         # If replies to ask for nearby clinic
         send_text(
             event=event,
             message=templates.high_temp_ask_location,
+            require_read=False,
             socketio=socketio,
             user_id=user_id
         )
 
-    elif status == "s1f2":
+    elif status == status_code.high_temp["dont_need_clinic_info"]:
         # If doesn't need nearby clinic info
         send_text(
             event=event,
-            message=templates.high_temp_ending,
+            message=templates.high_temp_asap,
+            require_read=False,
             socketio=socketio,
             user_id=user_id
         )
-        db.update_status(status="s", user_id=user_id)
+        db.update_status(status=status_code.system["null_state"], user_id=user_id)
 
-    elif status == "s1dx_err":
+    elif status == status_code.high_temp["unknown"]:
         send_text(
             event=event,
             message=templates.high_temp_unknown,
+            require_read=False,
             socketio=socketio,
             user_id=user_id
         )
@@ -504,7 +590,7 @@ def high_temp(event=None, message=None, socketio=None, status=None, user_id=None
         )
 
     # Status 4: Return clinic and end scenario
-    elif status == "s1s3":
+    elif status == status_code.high_temp["end"]:
         # Send clinic info and ask to go see doctor ASAP
         clinic = templates.get_nearby_clinic(message)
 
@@ -515,15 +601,25 @@ def high_temp(event=None, message=None, socketio=None, status=None, user_id=None
                 socketio=socketio,
                 user_id=user_id
             )
-        else:
+
             send_text(
                 event=event,
-                message=clinic,
+                message=templates.high_temp_asap,
+                require_read=False,
                 socketio=socketio,
                 user_id=user_id
             )
 
-        db.update_status(status="s", user_id=user_id)
+        else:
+            send_text(
+                event=event,
+                message=clinic,
+                require_read=False,
+                socketio=socketio,
+                user_id=user_id
+            )
+
+        db.update_status(status=status_code.system["null_state"], user_id=user_id)
 
 
 def wait(event=None, message=None, socketio=None, status=None, user_id=None):
@@ -531,6 +627,7 @@ def wait(event=None, message=None, socketio=None, status=None, user_id=None):
     send_text(
         event=event,
         message=templates.system_wait_admin,
+        require_read=True,
         socketio=socketio,
         user_id=user_id
     )

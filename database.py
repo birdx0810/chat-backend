@@ -77,7 +77,38 @@ def query_all(qry, var):
 
 def update(qry, var):
     """
-    Function for updating DB
+    Function for updating rows DB (No INSERT)
+    """
+    is_success = False
+    try:
+        conn = mariadb.connect(**config)
+        conn.autocommit = False
+        conn.start_transaction()
+        try:
+            cursor = conn.cursor()
+            cursor.execute(qry, var)
+            is_success = True
+        except mariadb.Error as err:
+            print(err)
+            print(traceback.format_exc())
+        finally:
+            cursor.close()
+
+    except mariadb.Error as err:
+        conn.rollback()
+        print(err)
+        print(traceback.format_exc())
+    else:
+        conn.commit()
+        print("Update successful")
+    finally:
+        conn.close()
+
+    return is_success
+
+def insert(qry, var):
+    """
+    Function for inserting rows into DB
     """
     last_row_id = None
     try:
@@ -100,15 +131,13 @@ def update(qry, var):
         print(traceback.format_exc())
     else:
         conn.commit()
-        print("Update successful")
+        print("Insert successful")
     finally:
         conn.close()
 
     return last_row_id
 
 # Other functions
-
-
 def log(direction=None, message=None, timestamp=None, user_id=None):
     """
     Log user messages and the replies of bot to DB
@@ -145,12 +174,14 @@ def log(direction=None, message=None, timestamp=None, user_id=None):
         last_accum_senti_score = result["accum_senti_score"]
 
     qry2 = """
-        INSERT INTO mb_logs (user_id, message, direction, timestamp)
-        VALUES (%s, %s, %s, %s);
+        INSERT INTO mb_logs
+        (user_id, message, direction, timestamp, is_read, require_read)
+        VALUES
+        (%s, %s, %s, %s, 0, 0);
     """
 
     # Insert message to mb_logs
-    msg_id = update(qry2, (user_id, message, direction, timestamp))
+    msg_id = insert(qry2, (user_id, message, direction, timestamp))
 
     print(
         f"Message {'from' if direction == 0 else 'to'} user {user_id} saved to DB")
@@ -174,23 +205,58 @@ def log(direction=None, message=None, timestamp=None, user_id=None):
         """
 
         # Log message to database
-        update(qry3, (msg_id, senti_score, accum_senti_score))
+        insert(qry3, (msg_id, senti_score, accum_senti_score))
         return timestamp, senti_score, accum_senti_score
 
     return timestamp, None, None
 
 
-def get_users():
+def get_users(max_amount=None, offset=None):
     """
     Gets the `user_id` and `user_name` for all users
     """
-    qry = """
-        SELECT user_id, user_name
-        FROM mb_user;
+    qry1 = """
+        SELECT mb_user.user_id   AS user_id,
+               mb_user.user_name AS user_name,
+               mb_logs.message   AS message,
+               mb_logs.timestamp AS timestamp,
+               mb_logs.is_read   AS is_read
+        FROM   mb_user
+        JOIN   mb_logs
+        ON     mb_user.user_id=mb_logs.user_id
+        WHERE  timestamp
+        IN (
+            SELECT   MAX(mb_logs.timestamp)
+            FROM     mb_logs
+            WHERE    mb_logs.user_id=user_id
+            GROUP BY mb_logs.user_id
+        )
+        GROUP BY mb_user.user_id
+        ORDER BY timestamp DESC
+        LIMIT  %s
+        OFFSET %s;
     """
-    result = query_all(qry, None)
+    users = query_all(qry1, (max_amount, offset))
 
-    return result
+    qry2 = """
+        SELECT   mb_logs.require_read AS require_read
+        FROM     mb_user
+        JOIN     mb_logs
+        ON       mb_user.user_id=mb_logs.user_id
+        WHERE    mb_logs.user_id=%s
+        AND      mb_logs.require_read=1
+        GROUP BY mb_logs.user_id
+        LIMIT 1;
+    """
+
+    for user in users:
+        result = query_one(qry2, (user["user_id"],))
+        if result is not None:
+            user["require_read"] = 1
+        else:
+            user["require_read"] = 0
+
+    return users
 
 
 def get_messages(max_amount=None, offset=None, user_id=None):
@@ -203,6 +269,8 @@ def get_messages(max_amount=None, offset=None, user_id=None):
                   mb_logs.message                    AS message,
                   mb_logs.direction                  AS direction,
                   mb_logs.timestamp                  AS timestamp,
+                  mb_logs.is_read                    AS is_read,
+                  mb_logs.require_read               AS require_read,
                   mb_logs_analysis.senti_score       AS senti_score,
                   mb_logs_analysis.accum_senti_score AS accum_senti_score
         FROM      mb_logs
@@ -219,23 +287,22 @@ def get_messages(max_amount=None, offset=None, user_id=None):
     return result
 
 
-def get_last_message(user_id=None):
+def get_last_timestamp(user_id=None):
     """
     Get last message
     """
     qry = """
-        SELECT message, timestamp
-        FROM mb_logs
-        WHERE user_id=%s
-        ORDER BY timestamp DESC
-        LIMIT 1;
+        SELECT   MAX(timestamp) AS timestamp
+        FROM     mb_logs
+        WHERE    user_id=%s
+        GROUP BY user_id;
     """
     result = query_one(qry, (user_id,))
 
     if result is None:
-        return None, None
+        return None
 
-    return result["message"], result["timestamp"]
+    return result["timestamp"]
 
 
 def get_user_id(birth=None, name=None):
@@ -300,7 +367,7 @@ def add_user(user_id=None):
         VALUES (%s);
     """
 
-    update(qry, (user_id,))
+    insert(qry, (user_id,))
 
     # TODO: Error Notification
 
@@ -402,3 +469,39 @@ def check_login(user_name=None, password=None, token=None):
             return None
 
     return token
+
+
+def message_is_read(timestamp=None, user_id=None):
+    qry = """
+        UPDATE mb_logs
+        SET    is_read=1,
+               require_read=0
+        WHERE  user_id=%s
+        AND    timestamp<=%s
+        AND    is_read=0;
+    """
+
+    is_success = update(qry, (user_id, timestamp))
+
+    print(is_success)
+
+    if is_success:
+        return True
+    return False
+
+
+def message_require_read(user_id=None):
+    qry = """
+        UPDATE   mb_logs
+        SET      is_read=0,
+                 require_read=1
+        WHERE    user_id=%s
+        ORDER BY timestamp DESC
+        LIMIT 1;
+    """
+
+    is_success = update(qry, (user_id,))
+
+    if is_success:
+        return True
+    return False
