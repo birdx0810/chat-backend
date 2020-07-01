@@ -77,7 +77,38 @@ def query_all(qry, var):
 
 def update(qry, var):
     """
-    Function for updating DB
+    Function for updating rows DB (No INSERT)
+    """
+    is_success = False
+    try:
+        conn = mariadb.connect(**config)
+        conn.autocommit = False
+        conn.start_transaction()
+        try:
+            cursor = conn.cursor()
+            cursor.execute(qry, var)
+            is_success = True
+        except mariadb.Error as err:
+            print(err)
+            print(traceback.format_exc())
+        finally:
+            cursor.close()
+
+    except mariadb.Error as err:
+        conn.rollback()
+        print(err)
+        print(traceback.format_exc())
+    else:
+        conn.commit()
+        print("Update successful")
+    finally:
+        conn.close()
+
+    return is_success
+
+def insert(qry, var):
+    """
+    Function for inserting rows into DB
     """
     last_row_id = None
     try:
@@ -100,15 +131,13 @@ def update(qry, var):
         print(traceback.format_exc())
     else:
         conn.commit()
-        print("Update successful")
+        print("Insert successful")
     finally:
         conn.close()
 
     return last_row_id
 
 # Other functions
-
-
 def log(direction=None, message=None, timestamp=None, user_id=None):
     """
     Log user messages and the replies of bot to DB
@@ -152,7 +181,7 @@ def log(direction=None, message=None, timestamp=None, user_id=None):
     """
 
     # Insert message to mb_logs
-    msg_id = update(qry2, (user_id, message, direction, timestamp))
+    msg_id = insert(qry2, (user_id, message, direction, timestamp))
 
     print(
         f"Message {'from' if direction == 0 else 'to'} user {user_id} saved to DB")
@@ -176,7 +205,7 @@ def log(direction=None, message=None, timestamp=None, user_id=None):
         """
 
         # Log message to database
-        update(qry3, (msg_id, senti_score, accum_senti_score))
+        insert(qry3, (msg_id, senti_score, accum_senti_score))
         return timestamp, senti_score, accum_senti_score
 
     return timestamp, None, None
@@ -338,7 +367,7 @@ def add_user(user_id=None):
         VALUES (%s);
     """
 
-    update(qry, (user_id,))
+    insert(qry, (user_id,))
 
     # TODO: Error Notification
 
@@ -448,11 +477,13 @@ def message_is_read(timestamp=None, user_id=None):
         SET    is_read=1,
                require_read=0
         WHERE  user_id=%s
-        AND    timestamp <= %s
+        AND    timestamp<=%s
         AND    is_read=0;
     """
 
     is_success = update(qry, (user_id, timestamp))
+
+    print(is_success)
 
     if is_success:
         return True

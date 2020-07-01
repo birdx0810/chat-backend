@@ -31,6 +31,7 @@ import event as e
 import responder
 import templates
 import environment
+import status_code
 
 ##############################
 # Application & variable initialization
@@ -44,7 +45,8 @@ cors = CORS(app, resources={
     r"/login": {"Access-Control-Allow-Credentials": True},
     r"/users": {"Access-Control-Allow-Credentials": True},
     r"/messages": {"Access-Control-Allow-Credentials": True},
-    r"/send": {"Access-Control-Allow-Credentials": True}
+    r"/send": {"Access-Control-Allow-Credentials": True},
+    r"/message_is_read": {"Access-Control-Allow-Credentials": True},
 })
 app.config["SERVER_NAME"] = config["server_name"]
 socketio = SocketIO(app, async_mode="eventlet", cors_allowed_origins="*")
@@ -61,8 +63,6 @@ handler = WebhookHandler(keys[1])
 # Callback API (LINE)
 ##############################
 # Listen to all POST requests from HOST/callback
-
-
 @app.route("/callback", methods=["POST"])
 def callback():
     # get X-Line-Signature header value
@@ -80,8 +80,6 @@ def callback():
 
 # API for triggering event.high_temp case
 # Accepts a json file with user name and birth
-
-
 @app.route("/event_high_temp", methods=["POST"])
 def high_temp():
     if request.headers["Content-Type"] != "application/json":
@@ -98,7 +96,7 @@ def high_temp():
         print(traceback.format_exc())
         return abort(404, "Not Found: User ID not found")
 
-    status = db.update_status(status="s1s0", user_id=user_id)
+    status = db.update_status(status=status_code.high_temp["initialization"], user_id=user_id)
     responder.high_temp(
         event=None,
         message=None,
@@ -133,18 +131,9 @@ def get_user():
         if db.check_login(token=token) is None:
             raise ValueError(f"Invalid token {token}")
 
-        if "timestamp_offset" in data:
-            offset = data["timestamp_offset"]
-        else:
-            offset = 0
-        if "max_amount" in data:
-            max_amount = data["max_amount"]
-        else:
-            max_amount = 10
-
         users = db.get_users(
-            max_amount=max_amount,
-            offset=offset
+            max_amount=data["max_amount"],
+            offset=data["timestamp_offset"]
         )
 
         temp = []
@@ -172,18 +161,7 @@ def get_user():
 @app.route("/messages", methods=["POST"])
 def get_old_msgs():
     """
-    - input:
-        - user_id: string
-        - timestamp_offset: timestamp
-        - maxAmount: int
-    - output:
-        array[{
-            user_id,
-            user_name,
-            direction,
-            content,
-            timestamp,
-        }]
+    API for frontend to get messages given user_id
     """
 
     try:
@@ -220,8 +198,8 @@ def get_old_msgs():
                 "content": message["message"],
                 "direction": message["direction"],
                 "is_read": message["is_read"] == 1,
-                "require_read": message["require_read"],
-                "timestamp": message["timestamp"] == 1,
+                "require_read": message["require_read"] == 1,
+                "timestamp": message["timestamp"],
                 "user_id": user_id,
                 "user_name": user_name,
             })
@@ -236,6 +214,9 @@ def get_old_msgs():
 
 @app.route("/send", methods=["POST"])
 def send_msg():
+    """
+    API for sending messages from frontend to users
+    """
     try:
         data = request.get_json(force=True)
     except Exception as err:
@@ -273,6 +254,9 @@ def send_msg():
 
 @app.route("/login", methods=["POST", "OPTIONS"])
 def login():
+    """
+    API for frontend admin login
+    """
     if request.method == "OPTIONS":
         return flask.Response(status=200)
 
@@ -319,8 +303,16 @@ def login():
     return response
 
 
-@app.route("/message_is_read", methods=["POST"])
+@app.route("/message_is_read", methods=["POST", "OPTIONS"])
 def message_is_read():
+    """
+    API for frontend trigger admin has read user message
+    """
+    if request.method == "OPTIONS":
+        # data = request.get_json(force=True)
+        # print(data)
+        return flask.Response(status=200)
+
     try:
         data = request.get_json(force=True)
 
@@ -331,11 +323,14 @@ def message_is_read():
 
         user_id = data["user_id"]
         timestamp = data["timestamp"]
+        print(timestamp)
 
         ok = db.message_is_read(
             timestamp=timestamp,
             user_id=user_id
         )
+
+        print(ok)
 
         if ok:
             response = flask.Response(status=200)
@@ -355,6 +350,9 @@ def message_is_read():
 
 @socketio.on("connect", namespace="/")
 def handle_connection():
+    """
+    API for frontend to establish connection
+    """
     try:
         token = request.args.get("token")
 
@@ -376,9 +374,11 @@ def error_handler_chat(err):
 ##############################
 # Message handler
 ##############################
-
-
 def message_handler(event, message):
+    """
+    Pass id, msg, and session into event function and return updated status
+    Respond to user according to new status
+    """
     # Retreive user_id
     user_id = event.source.user_id
 
@@ -390,7 +390,11 @@ def message_handler(event, message):
         status = db.get_status(user_id=user_id)
 
     # Trigger timeout, only ignore if in registration status
-    if status not in ["r", "r0", "r1", "r_err"] and \
+    if status not in [
+        status_code.registration["init_new_user"],
+        status_code.registration["ask_user_name"],
+        status_code.registration["ask_birth_day"]
+    ] and \
        timestamp is not None:
         expired = datetime.now().timestamp() - timestamp > timedelta(days=1).total_seconds()
 
@@ -426,7 +430,11 @@ def message_handler(event, message):
     )
 
     # User in registration
-    if status in ["r", "r0", "r1", "r_err"]:
+    if status in [
+        status_code.registration["init_new_user"],
+        status_code.registration["ask_user_name"],
+        status_code.registration["ask_birth_day"]
+    ]:
         status = e.registration(
             message=message,
             status=status,
@@ -439,12 +447,12 @@ def message_handler(event, message):
         )
 
     # User trigger predefine QA or want Custom service
-    elif status == "s":
+    elif status == status_code.system["null_state"]:
         if any([
                 keyword in message
                 for keyword in templates.qa_trigger
         ]):
-            status = "qa0"
+            status = status_code.qa["initialization"]
             db.update_status(
                 status=status,
                 user_id=user_id,
@@ -456,7 +464,7 @@ def message_handler(event, message):
                 status=status
             )
         else:
-            status = "w"
+            status = status_code.system["wait_customer_service"]
             db.update_status(
                 status=status,
                 user_id=user_id,
@@ -470,12 +478,12 @@ def message_handler(event, message):
             )
 
     # User trigger predefine QA
-    elif status == "w" and any([
+    elif status == status_code.system["wait_customer_service"] and any([
             keyword in message
             for keyword in templates.qa_trigger
     ]):
 
-        status = "qa0"
+        status = status_code.qa["initialization"]
         db.update_status(
             status=status,
             user_id=user_id,
@@ -487,7 +495,13 @@ def message_handler(event, message):
             status=status
         )
 
-    elif status in ["qa0", "qa1-1", "qa1-2", "qa2_f"]:
+    elif status in [
+        status_code.qa["initialization"],
+        status_code.qa["found_question"],
+        status_code.qa["fail_to_find_question"],
+        status_code.qa["not_correct_question"],
+        status_code.qa["user_label_answer"]
+    ]:
         status = e.qa(
             event=event,
             message=message,
@@ -501,9 +515,19 @@ def message_handler(event, message):
         )
 
     # User in scenario 1
-    elif status in ["s1s0", "s1s1", "s1d0", "s1d1", "s1d2",
-                    "s1d3", "s1d4", "s1d5", "s1df", "s1s2",
-                    "s1s3", "s1s4"]:
+    elif status in [
+        status_code.high_temp["initialization"],
+        status_code.high_temp["user_not_feeling_well"],
+        status_code.high_temp["皮膚出疹"],
+        status_code.high_temp["眼窩痛"],
+        status_code.high_temp["喉嚨痛"],
+        status_code.high_temp["咳嗽"],
+        status_code.high_temp["咳血痰"],
+        status_code.high_temp["肌肉酸痛"],
+        status_code.high_temp["other_symptom"],
+        status_code.high_temp["need_clinic_info"],
+        status_code.high_temp["unknown"],
+    ]:
         status = e.high_temp(
             event=event,
             message=message,
@@ -517,22 +541,20 @@ def message_handler(event, message):
             user_id=user_id
         )
 
+#########################
+# LINE Endpoint for receiving user messages
+#########################
+
 # Text message handler
-
-
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
-    """
-    Pass id, msg, and session into event function and return updated status
-    Respond to user according to new status
-    """
     # Get user message
     message_handler(
         event=event,
         message=event.message.text
     )
 
-
+# Sticker message handler
 @handler.add(MessageEvent, message=StickerMessage)
 def handle_sticker(event):
     # Set user message as a hint
@@ -545,16 +567,17 @@ def handle_sticker(event):
         )
     )
 
-
+# Image message handler
 @handler.add(MessageEvent, message=ImageMessage)
 def handle_image(event):
     # retrieve user metadata
+    print(event)
     message_handler(
         event=event,
         message=templates.system_image_message
     )
 
-
+# Video message handler
 @handler.add(MessageEvent, message=VideoMessage)
 def handle_video(event):
     # retrieve user metadata
@@ -563,7 +586,7 @@ def handle_video(event):
         message=templates.system_video_message
     )
 
-
+# Audio message handler
 @handler.add(MessageEvent, message=AudioMessage)
 def handle_audio(event):
     # retrieve user metadata
@@ -583,8 +606,6 @@ def allow_cors(response):
 ##############################
 # Main function
 ##############################
-
-
 if __name__ == "__main__":
     # Setup host port
     port = int(os.environ.get("PORT", 8080))

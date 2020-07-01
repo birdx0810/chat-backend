@@ -19,10 +19,7 @@ from linebot import (
 import database as db
 import templates
 import environment
-
-# Setup path for other modules
-sys.path.insert(0, os.path.dirname(
-    os.path.realpath(__file__)) + "/./ChineseNER")
+import status_code
 
 keys = environment.get_key()
 # Channel Access Token
@@ -44,17 +41,18 @@ def registration(message=None, status=None, user_id=None):
     message = message.strip()
 
     # New user_id detected (not in session)
-    if status == "r":
-        return db.update_status(status="r0", user_id=user_id)
+    if status == status_code.registration["init_new_user"]:
+        return db.update_status(status=status_code.registration["ask_user_name"], user_id=user_id)
 
     # Get user Chinese name
-    if status == "r0":
+    if status == status_code.registration["ask_user_name"]:
         if 0 < len(message) <= 20 and re.match(r"[\u4e00-\u9fff]{1,20}", message):
             db.update_user_name(user_id=user_id, user_name=message)
-            return "r1"
-        return "r_err"
+            return status_code.registration["ask_birth_day"]
+        return status_code.registration["error"]
+
     # Get user birthday
-    if status == "r1":
+    if status == status_code.registration["ask_birth_day"]:
         # Try parsing string to integer
         try:
             if len(message) != 8:
@@ -68,9 +66,9 @@ def registration(message=None, status=None, user_id=None):
             if user_bday > current:
                 raise ValueError("Impossible birthday")
         except Exception:
-            return "r_err"
+            return status_code.registration["error"]
         db.update_user_bday(user_id=user_id, user_bday=user_bday)
-        return "r2"
+        return status_code.registration["end"]
     raise ValueError(f"Invalid status code: {status}")
 
 ##############################
@@ -87,28 +85,28 @@ def qa(event=None, message=None, status=None):
 
     user_id = event.source.user_id
 
-    if status == "qa0":
-        return db.update_status(status="qa1", user_id=user_id)
+    if status == status_code.qa["initialization"]:
+        return db.update_status(status=status_code.qa["received_question"], user_id=user_id)
 
-    if status == "qa1-1":
+    if status == status_code.qa["found_question"]:
         if message in templates.T:
-            return db.update_status(status="qa2_t", user_id=user_id)
+            return db.update_status(status=status_code.qa["is_correct_question"], user_id=user_id)
         if message in templates.F:
-            return db.update_status(status="qa2_f", user_id=user_id)
-        return "qa1-1_err"
+            return db.update_status(status=status_code.qa["not_correct_question"], user_id=user_id)
+        return status_code.qa["found_unknown"]
 
-    if status == "qa1-2":
+    if status == status_code.qa["fail_to_find_question"]:
         if message in templates.T:
-            return db.update_status(status="qa4", user_id=user_id)
+            return db.update_status(status=status_code.qa["contact_customer_service"], user_id=user_id)
         if message in templates.F:
-            return db.update_status(status="qa2_t", user_id=user_id)
-        return "qa1-2_err"
+            return db.update_status(status=status_code.qa["is_correct_question"], user_id=user_id)
+        return status_code.qa["not_found_unknown"]
 
-    if status == "qa2_f":
+    if status == status_code.qa["not_correct_question"]:
         if message in templates.F or \
            message in [qa_obj["question"] for qa_obj in templates.qa_list]:
-            return db.update_status(status="qa3", user_id=user_id)
-        return "qa2_err"
+            return db.update_status(status=status_code.qa["user_label_answer"], user_id=user_id)
+        return qa["label_unknown"]
 
     raise ValueError(f"Invalid status code: {status}")
 
@@ -126,30 +124,37 @@ def high_temp(event=None, message=None, status=None):
 
     user_id = event.source.user_id
 
-    if status == "s1s0":
+    if status == status_code.high_temp["initialization"]:
         # API triggered, will ask if not feeling well (T/F reply)
         if message in templates.T:
-            return db.update_status(status="s1s1", user_id=user_id)
+            return db.update_status(status=status_code.high_temp["user_not_feeling_well"], user_id=user_id)
         if message in templates.F:
-            return db.update_status(status="s1f1", user_id=user_id)
-        return "s1s0_err"
+            return db.update_status(status=status_code.high_temp["user_not_feeling_well"], user_id=user_id)
+        return status_code.high_temp["user_feeling_unknown"]
 
-    if status == "s1s1":
+    if status == status_code.high_temp["user_not_feeling_well"]:
         # Check for symptoms in reply (doctor)
         for symptom in templates.symptoms_list:
             if message == symptom["label"]:
                 return db.update_status(status=symptom["status"], user_id=user_id)
 
-        return db.update_status(status="s1df", user_id=user_id)
+        return db.update_status(status=status_code.high_temp["other_symptom"], user_id=user_id)
 
-    if status in ["s1d0", "s1d1", "s1d2", "s1d3", "s1d4", "s1d5"]:
+    if status in [
+        status_code.high_temp["皮膚出疹"],
+        status_code.high_temp["眼窩痛"],
+        status_code.high_temp["喉嚨痛"],
+        status_code.high_temp["咳嗽"],
+        status_code.high_temp["咳血痰"],
+        status_code.high_temp["肌肉酸痛"]
+    ]:
         if message in templates.T:
-            return db.update_status(status="s1s2", user_id=user_id)
+            return db.update_status(status=status_code.high_temp["need_clinic_info"], user_id=user_id)
         if message in templates.F:
-            return db.update_status(status="s1f2", user_id=user_id)
-        return "s1dx_err"
+            return db.update_status(status=status_code.high_temp["dont_need_clinic_info"], user_id=user_id)
+        return status_code.high_temp["unknown"]
 
-    if status == "s1s2":
-        return db.update_status(status="s1s3", user_id=user_id)
+    if status == status_code.high_temp["need_clinic_info"]:
+        return db.update_status(status=status_code.high_temp["end"], user_id=user_id)
 
     raise ValueError(f"Invalid status: {status}")

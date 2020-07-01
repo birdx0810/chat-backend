@@ -1,16 +1,20 @@
 registration = {}
-registration["initialization"] = "r"
+registration["init_new_user"] = "r"
 registration["ask_user_name"] = "r0"
 registration["ask_birth_day"] = "r1"
 registration["end"] = "r2"
 registration["error"] = "r_err"
 
 qa = {}
-qa["initializtion"] = "qa0"
+qa["initialization"] = "qa0"
+qa["received_question"] = "qa1"
 qa["found_question"] = "qa1-1"
+qa["found_unknown"] = "qa1-1_err"
 qa["fail_to_find_question"] = "qa1-2"
+qa["not_found_unknown"] = "qa1-2_err"
 qa["is_correct_question"] = "qa2_t"
 qa["not_correct_question"] = "qa2_f"
+qa["label_unknown"] = "qa2_err"
 qa["user_label_answer"] = "qa3"
 qa["contact_customer_service"] = "qa4"
 
@@ -18,6 +22,7 @@ high_temp = {}
 high_temp["initialization"] = "s1s0"
 high_temp["user_not_feeling_well"] = "s1s1"
 high_temp["user_feeling_well"] = "s1f1"
+high_temp["user_feeling_unknown"] = "s1s0_err"
 high_temp["皮膚出疹"] = "s1d0"
 high_temp["眼窩痛"] = "s1d1"
 high_temp["喉嚨痛"] = "s1d2"
@@ -31,4 +36,5 @@ high_temp["unknown"] = "s1dx_err"
 high_temp["end"] = "s1s3"
 
 system = {}
-system["wait_customer_system"] = "w"
+system["null_state"] = "s"
+system["wait_customer_service"] = "w"

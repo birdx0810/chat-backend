@@ -10,8 +10,8 @@ from linebot.models import (
     CarouselColumn, CarouselTemplate, ButtonsTemplate, MessageTemplateAction
 )
 import googlemaps
-
 import environment
+import status_code
 
 gmaps = googlemaps.Client(key=environment.get_maps_key())
 
@@ -33,8 +33,8 @@ system_wait_admin = "感謝您使用 HEARThermo 2.0。\n我們已收到您的訊
 def system_senti_scores(message=None, senti_score=None, accum_senti_score=None):
     return (
         f"{message}\n" +
-        f"[[情緒分數:    {senti_score:.6f}]]\n" +
-        f"[[累積情緒分數: {accum_senti_score:.6f}]]"
+        f"[[情緒分數:    {senti_score:.3f}]]\n" +
+        f"[[累積情緒分數: {accum_senti_score:.3f}]]"
     )
 
 ##############################
@@ -115,8 +115,8 @@ def want_template(msg):
 
 
 registration_err_msg = {
-    "r0": "請輸入您的中文姓名（e.g. 王小明）",
-    "r1": "請輸入您的生日（年年年年月月日日）"
+    status_code.registration["ask_user_name"]: "請輸入您的中文姓名（e.g. 王小明）",
+    status_code.registration["ask_birth_day"]: "請輸入您的生日（年年年年月月日日）"
 }
 
 registration_greeting = "初次見面，請輸入您的中文姓名（e.g. 王小明）"
@@ -126,7 +126,7 @@ registration_birthday = "請輸入您的生日（年年年年月月日日）"
 registration_successful = "註冊成功啦"
 
 
-def registration_err(status="r0"):
+def registration_err(status=status_code.registration["ask_user_name"]):
     return "不好意思，您的輸入不符格式。\n" + registration_err_msg[status]
 
 
@@ -241,32 +241,32 @@ def qa_template():
 
 symptoms_list = [
     {
-        "status": "s1d0",
+        "status": status_code.high_temp["皮膚出疹"],
         "label": "皮膚出疹",
         "reply": "體溫異常升高，加上皮膚出疹為疑似登革熱情形，但這只是初步懷疑請不用太過驚慌，以下為相關資訊提供給您！"
     },
     {
-        "status": "s1d1",
+        "status": status_code.high_temp["眼窩痛"],
         "label": "眼窩痛",
         "reply": "體溫異常升高，加上眼窩痛為疑似登革熱情形，但這只是初步懷疑請不用太過驚慌，以下為相關資訊提供給您！"
     },
     {
-        "status": "s1d2",
+        "status": status_code.high_temp["喉嚨痛"],
         "label": "喉嚨痛",
         "reply": "體溫異常升高，加上喉嚨痛為疑似流感情形，但這只是初步懷疑請不用太過驚慌，以下為相關資訊提供給您！"
     },
     {
-        "status": "s1d3",
+        "status": status_code.high_temp["咳嗽"],
         "label": "咳嗽",
         "reply": "體溫異常升高，加上咳嗽為疑似流感情形，但這只是初步懷疑請不用太過驚慌，以下為相關資訊提供給您！"
     },
     {
-        "status": "s1d4",
+        "status": status_code.high_temp["咳血痰"],
         "label": "咳血痰",
         "reply": "體溫異常升高，加上咳血痰為疑似流感情形，但這只是初步懷疑請不用太過驚慌，以下為相關資訊提供給您！"
     },
     {
-        "status": "s1d5",
+        "status": status_code.high_temp["肌肉酸痛"],
         "label": "肌肉酸痛",
         "reply": "體溫異常升高，加上肌肉酸痛為疑登革熱/流感情形，但這只是初步懷疑請不用太過驚慌，以下為相關資訊提供給您！"
     }
