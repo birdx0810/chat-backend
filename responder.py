@@ -44,6 +44,7 @@ def send_frontend(
         timestamp=None,
         user_id=None
     ):
+
     try:
         frontend_data = json.dumps([{
             "content": message,

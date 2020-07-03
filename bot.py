@@ -128,6 +128,8 @@ def get_user():
 
         token = data["token"]
 
+        print(data)
+
         if db.check_login(token=token) is None:
             raise ValueError(f"Invalid token {token}")
 
@@ -426,6 +428,7 @@ def message_handler(event, message):
         ),
         require_read=False,
         socketio=socketio,
+        timestamp=timestamp,
         user_id=user_id
     )
 

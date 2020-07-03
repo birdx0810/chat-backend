@@ -106,7 +106,7 @@ def qa(event=None, message=None, status=None):
         if message in templates.F or \
            message in [qa_obj["question"] for qa_obj in templates.qa_list]:
             return db.update_status(status=status_code.qa["user_label_answer"], user_id=user_id)
-        return qa["label_unknown"]
+        return status_code.qa["label_unknown"]
 
     raise ValueError(f"Invalid status code: {status}")
 
