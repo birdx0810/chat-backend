@@ -2,7 +2,7 @@
 """
 Templates for replying messages, reduce the dirtiness of the responder
 """
-import pickle
+import json
 import traceback
 
 from linebot.models import (
@@ -18,6 +18,17 @@ gmaps = googlemaps.Client(key=environment.get_maps_key())
 ##############################
 # System templates
 ##############################
+
+
+def system_notification_message(user_name=None):
+    return json.dumps({
+        "notification": {
+            "title": f"使用 {user_name} 者需要您的回覆幫助",
+            "body": "請儘速回覆～"
+        }
+    })
+    # return f"使用者 {user} 傳送了 {message}"
+
 
 system_sticker_message = "[[使用者傳送了貼圖]]"
 
@@ -158,7 +169,9 @@ qa_list = [
         "label": "偶爾不穿手環",
         "keywords": ["偶爾", "不穿", "拆掉"],
         "question": "可以偶爾把手環拆掉嗎？",
-        "answer": "原則上會希望除了洗澡之外的時間都將手環佩戴著，因為連續的體溫監測才能更及時的掌握您的體溫狀況及變化。若偶爾想要將手環拆下稍作休息，請將手環與手機放在同一位置以保持藍芽連線",
+        "answer": """
+            原則上會希望除了洗澡之外的時間都將手環佩戴著，因為連續的體溫監測才能更及時的掌握您的體溫狀況及變化。若偶爾想要將手環拆下稍作休息，請將手環與手機放在同一位置以保持藍芽連線
+        """,
     },
     {
         "label": "手環電池",
@@ -177,10 +190,6 @@ qa_list = [
 qa_trigger = [
     "/qa",
 ]
-
-# Get question embeddings
-with open("embeddings/question.pickle", "rb") as f:
-    question_embeddings = pickle.load(f)
 
 qa_greeting = "您好，請問我可以如何幫您？\n（小弟目前還在學習中，請多多指教～）"
 

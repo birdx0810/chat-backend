@@ -7,7 +7,10 @@ The script for responding to user according to status
 - TODO: Event Push News
 """
 
+from urllib.parse import urlparse
+from datetime import timedelta, datetime
 import json
+import math
 import traceback
 
 # Import required modules
@@ -18,6 +21,8 @@ from linebot import (
 from linebot.models import (
     TextSendMessage, LocationSendMessage
 )
+
+from pywebpush import webpush, WebPushException
 
 import environment
 import database as db
@@ -37,13 +42,13 @@ handler = WebhookHandler(keys[1])
 
 
 def send_frontend(
-        direction=None,
-        message=None,
-        require_read=False,
-        socketio=None,
-        timestamp=None,
-        user_id=None
-    ):
+    direction=None,
+    message=None,
+    require_read=False,
+    socketio=None,
+    timestamp=None,
+    user_id=None
+):
 
     try:
         frontend_data = json.dumps([{
@@ -64,12 +69,12 @@ def send_frontend(
 
 
 def send_text(
-        event=None,
-        message=None,
-        require_read=False,
-        socketio=None,
-        user_id=None
-    ):
+    event=None,
+    message=None,
+    require_read=False,
+    socketio=None,
+    user_id=None
+):
     """
     This function wraps the utilties for logging and sending messages
     event is None:  Push messages
@@ -83,6 +88,7 @@ def send_text(
 
     if require_read:
         db.message_require_read(user_id=user_id)
+        push_notification(message=message, user_id=user_id)
 
     try:
         if event is None:
@@ -113,7 +119,7 @@ def send_text(
 def send_template(event=None, socketio=None, template=None, user_id=None):
     """
     This function wraps the utilties for logging and sending templates
-    event is None:  Push templates
+    event is None: Push templates
     """
 
     # Save user message to DB (messages to user == 1)
@@ -181,6 +187,40 @@ def send_location(event=None, location=None, socketio=None, user_id=None):
     )
 
 
+def push_notification(user_id=None, message=None):
+    try:
+        admins = db.get_push_info()
+        message = templates.system_notification_message(
+            user_name=db.get_user_name(user_id=user_id)
+        )
+        for admin in admins:
+            endpoint = urlparse(admin["endpoint"])
+            endpoint_origin = '{uri.scheme}://{uri.netloc}'.format(
+                uri=endpoint)
+            webpush(
+                subscription_info={
+                    "endpoint": admin["endpoint"],
+                    "keys": {
+                        "auth": admin["auth"],
+                        "p256dh": admin["p256dh"],
+                    }
+                },
+                data=message,
+                vapid_private_key=environment.get_vapid_key()[1],
+                vapid_claims={
+                    "sub": "mailto:bird@example.org",
+                    "aud": endpoint_origin,
+                    "exp": math.floor(
+                        datetime.now().timestamp() + timedelta(days=1).total_seconds()
+                    )
+                }
+            )
+    except WebPushException as err:
+        print(err)
+        print(traceback.format_exc())
+        print("Failed to push notification")
+
+
 def registration(event=None, socketio=None, status=None):
     """
     Gets the status of user and replies according to user's registration status
@@ -212,7 +252,8 @@ def registration(event=None, socketio=None, status=None):
             socketio=socketio,
             user_id=user_id
         )
-        db.update_status(status=status_code.high_temp["API_Called"], user_id=user_id)
+        db.update_status(
+            status=status_code.high_temp["API_Called"], user_id=user_id)
     elif status == status_code.registration["error"]:
         send_text(
             event=event,
@@ -263,7 +304,8 @@ def qa(event=None, message=None, socketio=None, status=None):
                 user_id=user_id
             )
 
-            db.update_status(status=status_code.qa["found_question"], user_id=user_id)
+            db.update_status(
+                status=status_code.qa["found_question"], user_id=user_id)
         else:
             # Question not found, ask if need customer service
             send_text(
@@ -282,7 +324,8 @@ def qa(event=None, message=None, socketio=None, status=None):
                 user_id=user_id
             )
 
-            db.update_status(status=status_code.qa["fail_to_find_question"], user_id=user_id)
+            db.update_status(
+                status=status_code.qa["fail_to_find_question"], user_id=user_id)
 
     elif status == status_code.qa["found_unknown"]:
         send_text(
@@ -326,7 +369,8 @@ def qa(event=None, message=None, socketio=None, status=None):
             user_id=user_id
         )
 
-        db.update_status(status=status_code.system["null_state"], user_id=user_id)
+        db.update_status(
+            status=status_code.system["null_state"], user_id=user_id)
 
     elif status == status_code.qa["not_correct_question"]:
         send_template(
@@ -374,7 +418,8 @@ def qa(event=None, message=None, socketio=None, status=None):
             socketio=socketio,
             user_id=user_id
         )
-        db.update_status(status=status_code.system["null_state"], user_id=user_id)
+        db.update_status(
+            status=status_code.system["null_state"], user_id=user_id)
     elif status == status_code.qa["contact_customer_service"]:
         send_text(
             event=event,
@@ -384,7 +429,8 @@ def qa(event=None, message=None, socketio=None, status=None):
             user_id=user_id
         )
 
-        db.update_status(status=status_code.system["wait_customer_service"], user_id=user_id)
+        db.update_status(
+            status=status_code.system["wait_customer_service"], user_id=user_id)
     else:
         raise ValueError(f"Invalid status: {status}")
 
@@ -425,7 +471,8 @@ def high_temp(event=None, message=None, socketio=None, status=None, user_id=None
             user_id=user_id
         )
 
-        db.update_status(status=status_code.system["null_state"], user_id=user_id)
+        db.update_status(
+            status=status_code.system["null_state"], user_id=user_id)
 
     elif status == status_code.high_temp["user_feeling_unknown"]:
         send_text(
@@ -445,8 +492,8 @@ def high_temp(event=None, message=None, socketio=None, status=None, user_id=None
 
     # Status 2 - Ask for symptoms
     elif status in [
-        status_code.high_temp["皮膚出疹"],
-        status_code.high_temp["眼窩痛"]
+            status_code.high_temp["皮膚出疹"],
+            status_code.high_temp["眼窩痛"]
     ]:
         # If "皮膚出疹" & "眼窩痛" detected
         send_text(
@@ -475,9 +522,9 @@ def high_temp(event=None, message=None, socketio=None, status=None, user_id=None
         )
 
     elif status in [
-        status_code.high_temp["喉嚨痛"],
-        status_code.high_temp["咳嗽"],
-        status_code.high_temp["咳血痰"],
+            status_code.high_temp["喉嚨痛"],
+            status_code.high_temp["咳嗽"],
+            status_code.high_temp["咳血痰"],
     ]:
         # If "喉嚨痛" & "咳嗽" & "咳血痰" detected
         send_text(
@@ -550,7 +597,8 @@ def high_temp(event=None, message=None, socketio=None, status=None, user_id=None
             user_id=user_id
         )
 
-        db.update_status(status=status_code.system["null_state"], user_id=user_id)
+        db.update_status(
+            status=status_code.system["null_state"], user_id=user_id)
 
     # Status 3: Ask for location
     elif status == status_code.high_temp["need_clinic_info"]:
@@ -572,7 +620,8 @@ def high_temp(event=None, message=None, socketio=None, status=None, user_id=None
             socketio=socketio,
             user_id=user_id
         )
-        db.update_status(status=status_code.system["null_state"], user_id=user_id)
+        db.update_status(
+            status=status_code.system["null_state"], user_id=user_id)
 
     elif status == status_code.high_temp["unknown"]:
         send_text(
@@ -620,10 +669,11 @@ def high_temp(event=None, message=None, socketio=None, status=None, user_id=None
                 user_id=user_id
             )
 
-        db.update_status(status=status_code.system["null_state"], user_id=user_id)
+        db.update_status(
+            status=status_code.system["null_state"], user_id=user_id)
 
 
-def wait(event=None, message=None, socketio=None, status=None, user_id=None):
+def wait(event=None, socketio=None, user_id=None):
 
     send_text(
         event=event,

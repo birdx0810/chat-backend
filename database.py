@@ -106,6 +106,7 @@ def update(qry, var):
 
     return is_success
 
+
 def insert(qry, var):
     """
     Function for inserting rows into DB
@@ -138,6 +139,8 @@ def insert(qry, var):
     return last_row_id
 
 # Other functions
+
+
 def log(direction=None, message=None, timestamp=None, user_id=None):
     """
     Log user messages and the replies of bot to DB
@@ -505,3 +508,25 @@ def message_require_read(user_id=None):
     if is_success:
         return True
     return False
+
+
+def add_push_info(auth=None, endpoint=None, p256dh=None):
+    qry = """
+        UPDATE mb_admin
+        SET    auth=%s, endpoint=%s, p256dh=%s
+        WHERE  admin_name=2
+    """
+
+    update(qry, (auth, endpoint, p256dh))
+
+
+def get_push_info():
+    qry = """
+        SELECT auth, endpoint, p256dh
+        FROM   mb_admin
+        WHERE  auth IS NOT NULL
+        AND    endpoint IS NOT NULL
+        AND    p256dh IS NOT NULL;
+    """
+
+    return query_all(qry, None)

@@ -4,6 +4,23 @@ import os
 import json
 
 
+def get_vapid_key():
+    """
+    Get the VAPID keys for push notification
+    """
+    path = os.path.abspath(
+        f"{os.path.abspath(__file__)}/../key/vapid"
+    )
+
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"{path} does not exist")
+
+    with open(path, "r") as vapid_keys:
+        keys = [line.strip() for line in vapid_keys.readlines()]
+
+    return keys
+
+
 def get_key():
     """
     Get API and webhook key for given environment

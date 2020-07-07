@@ -47,6 +47,7 @@ cors = CORS(app, resources={
     r"/messages": {"Access-Control-Allow-Credentials": True},
     r"/send": {"Access-Control-Allow-Credentials": True},
     r"/message_is_read": {"Access-Control-Allow-Credentials": True},
+    r"/subscribe": {"Access-Control-Allow-Credentials": True},
 })
 app.config["SERVER_NAME"] = config["server_name"]
 socketio = SocketIO(app, async_mode="eventlet", cors_allowed_origins="*")
@@ -63,6 +64,8 @@ handler = WebhookHandler(keys[1])
 # Callback API (LINE)
 ##############################
 # Listen to all POST requests from HOST/callback
+
+
 @app.route("/callback", methods=["POST"])
 def callback():
     # get X-Line-Signature header value
@@ -80,6 +83,8 @@ def callback():
 
 # API for triggering event.high_temp case
 # Accepts a json file with user name and birth
+
+
 @app.route("/event_high_temp", methods=["POST"])
 def high_temp():
     if request.headers["Content-Type"] != "application/json":
@@ -96,7 +101,8 @@ def high_temp():
         print(traceback.format_exc())
         return abort(404, "Not Found: User ID not found")
 
-    status = db.update_status(status=status_code.high_temp["initialization"], user_id=user_id)
+    status = db.update_status(
+        status=status_code.high_temp["initialization"], user_id=user_id)
     responder.high_temp(
         event=None,
         message=None,
@@ -311,8 +317,6 @@ def message_is_read():
     API for frontend trigger admin has read user message
     """
     if request.method == "OPTIONS":
-        # data = request.get_json(force=True)
-        # print(data)
         return flask.Response(status=200)
 
     try:
@@ -345,10 +349,34 @@ def message_is_read():
         return abort(403, "Forbidden: Authentication is bad")
 
 
+@app.route("/subscribe", methods=["POST", "OPTIONS"])
+def subscribe():
+    """
+    API for receiving user-end browser information from frontend
+    """
+    if request.method == "OPTIONS":
+        return flask.Response(status=200)
+
+    try:
+        data = request.get_json(force=True)
+
+        db.add_push_info(
+            auth=data["auth"],
+            endpoint=data["endpoint"],
+            p256dh=data["p256dh"],
+        )
+
+        return flask.Response(status=200)
+
+    except Exception as err:
+        print(err)
+        print(traceback.format_exc())
+        return abort(403, "Forbidden: Authentication is bad")
+
+
 #########################
 # socket connection
 #########################
-
 
 @socketio.on("connect", namespace="/")
 def handle_connection():
@@ -376,6 +404,8 @@ def error_handler_chat(err):
 ##############################
 # Message handler
 ##############################
+
+
 def message_handler(event, message):
     """
     Pass id, msg, and session into event function and return updated status
@@ -393,11 +423,11 @@ def message_handler(event, message):
 
     # Trigger timeout, only ignore if in registration status
     if status not in [
-        status_code.registration["init_new_user"],
-        status_code.registration["ask_user_name"],
-        status_code.registration["ask_birth_day"]
+            status_code.registration["init_new_user"],
+            status_code.registration["ask_user_name"],
+            status_code.registration["ask_birth_day"]
     ] and \
-       timestamp is not None:
+            timestamp is not None:
         expired = datetime.now().timestamp() - timestamp > timedelta(days=1).total_seconds()
 
         if expired:
@@ -434,9 +464,9 @@ def message_handler(event, message):
 
     # User in registration
     if status in [
-        status_code.registration["init_new_user"],
-        status_code.registration["ask_user_name"],
-        status_code.registration["ask_birth_day"]
+            status_code.registration["init_new_user"],
+            status_code.registration["ask_user_name"],
+            status_code.registration["ask_birth_day"]
     ]:
         status = e.registration(
             message=message,
@@ -474,9 +504,7 @@ def message_handler(event, message):
             )
             responder.wait(
                 event=event,
-                message=message,
                 socketio=socketio,
-                status=status,
                 user_id=user_id
             )
 
@@ -499,11 +527,11 @@ def message_handler(event, message):
         )
 
     elif status in [
-        status_code.qa["initialization"],
-        status_code.qa["found_question"],
-        status_code.qa["fail_to_find_question"],
-        status_code.qa["not_correct_question"],
-        status_code.qa["user_label_answer"]
+            status_code.qa["initialization"],
+            status_code.qa["found_question"],
+            status_code.qa["fail_to_find_question"],
+            status_code.qa["not_correct_question"],
+            status_code.qa["user_label_answer"]
     ]:
         status = e.qa(
             event=event,
@@ -519,17 +547,17 @@ def message_handler(event, message):
 
     # User in scenario 1
     elif status in [
-        status_code.high_temp["initialization"],
-        status_code.high_temp["user_not_feeling_well"],
-        status_code.high_temp["皮膚出疹"],
-        status_code.high_temp["眼窩痛"],
-        status_code.high_temp["喉嚨痛"],
-        status_code.high_temp["咳嗽"],
-        status_code.high_temp["咳血痰"],
-        status_code.high_temp["肌肉酸痛"],
-        status_code.high_temp["other_symptom"],
-        status_code.high_temp["need_clinic_info"],
-        status_code.high_temp["unknown"],
+            status_code.high_temp["initialization"],
+            status_code.high_temp["user_not_feeling_well"],
+            status_code.high_temp["皮膚出疹"],
+            status_code.high_temp["眼窩痛"],
+            status_code.high_temp["喉嚨痛"],
+            status_code.high_temp["咳嗽"],
+            status_code.high_temp["咳血痰"],
+            status_code.high_temp["肌肉酸痛"],
+            status_code.high_temp["other_symptom"],
+            status_code.high_temp["need_clinic_info"],
+            status_code.high_temp["unknown"],
     ]:
         status = e.high_temp(
             event=event,
@@ -549,6 +577,8 @@ def message_handler(event, message):
 #########################
 
 # Text message handler
+
+
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     # Get user message
@@ -558,6 +588,8 @@ def handle_message(event):
     )
 
 # Sticker message handler
+
+
 @handler.add(MessageEvent, message=StickerMessage)
 def handle_sticker(event):
     # Set user message as a hint
@@ -571,6 +603,8 @@ def handle_sticker(event):
     )
 
 # Image message handler
+
+
 @handler.add(MessageEvent, message=ImageMessage)
 def handle_image(event):
     # retrieve user metadata
@@ -581,6 +615,8 @@ def handle_image(event):
     )
 
 # Video message handler
+
+
 @handler.add(MessageEvent, message=VideoMessage)
 def handle_video(event):
     # retrieve user metadata
@@ -590,6 +626,8 @@ def handle_video(event):
     )
 
 # Audio message handler
+
+
 @handler.add(MessageEvent, message=AudioMessage)
 def handle_audio(event):
     # retrieve user metadata
@@ -605,6 +643,7 @@ def allow_cors(response):
     response.headers["Access-Control-Allow-Headers"] = "Content-Type, Set-Cookie, *"
     response.headers["Access-Control-Allow-Origin"] = config["client_name"]
     return response
+
 
 ##############################
 # Main function
