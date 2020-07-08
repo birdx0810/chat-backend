@@ -36,7 +36,7 @@ system_video_message = "[[使用者傳送了影片]]"
 
 system_audio_message = "[[使用者傳送了語音訊息]]"
 
-system_wait_admin = "感謝您使用 HEARThermo 2.0。\n我們已收到您的訊息，客服會儘快與您聯繫。"
+system_wait_admin = "感謝您使用 HEARThermo 2.0。\n我們已收到您的訊息，客服人員會儘快與您聯繫。"
 
 
 def system_senti_scores(message=None, senti_score=None, accum_senti_score=None):
@@ -132,7 +132,7 @@ registration_greeting = "初次見面，請輸入您的中文姓名（e.g. 王�
 
 registration_birthday = "請輸入您的生日（年年年年月月日日）"
 
-registration_successful = "註冊成功啦"
+registration_successful = "註冊成功啦~!\n提醒您可以使用選單或輸入 /qa 進行簡單問答。\n有任何問題，我們會儘快請客服人員與您聯繫。"
 
 
 def registration_err(status=status_code.registration["ask_user_name"]):
