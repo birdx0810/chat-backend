@@ -510,14 +510,14 @@ def message_require_read(user_id=None):
     return False
 
 
-def add_push_info(auth=None, endpoint=None, p256dh=None):
+def add_push_info(auth=None, endpoint=None, p256dh=None, token=None):
     qry = """
         UPDATE mb_admin
         SET    auth=%s, endpoint=%s, p256dh=%s
-        WHERE  admin_name=2
+        WHERE  token=%s
     """
 
-    update(qry, (auth, endpoint, p256dh))
+    update(qry, (auth, endpoint, p256dh, token))
 
 
 def get_push_info():

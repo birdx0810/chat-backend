@@ -42,13 +42,13 @@ handler = WebhookHandler(keys[1])
 
 
 def send_frontend(
-    direction=None,
-    message=None,
-    require_read=False,
-    socketio=None,
-    timestamp=None,
-    user_id=None
-):
+        direction=None,
+        message=None,
+        require_read=False,
+        socketio=None,
+        timestamp=None,
+        user_id=None
+    ):
 
     try:
         frontend_data = json.dumps([{
@@ -69,12 +69,12 @@ def send_frontend(
 
 
 def send_text(
-    event=None,
-    message=None,
-    require_read=False,
-    socketio=None,
-    user_id=None
-):
+        event=None,
+        message=None,
+        require_read=False,
+        socketio=None,
+        user_id=None
+    ):
     """
     This function wraps the utilties for logging and sending messages
     event is None:  Push messages
@@ -194,28 +194,35 @@ def push_notification(user_id=None, message=None):
             user_name=db.get_user_name(user_id=user_id)
         )
         for admin in admins:
-            endpoint = urlparse(admin["endpoint"])
-            endpoint_origin = '{uri.scheme}://{uri.netloc}'.format(
-                uri=endpoint)
-            webpush(
-                subscription_info={
-                    "endpoint": admin["endpoint"],
-                    "keys": {
-                        "auth": admin["auth"],
-                        "p256dh": admin["p256dh"],
+            try:
+                endpoint = urlparse(admin["endpoint"])
+                endpoint_origin = '{uri.scheme}://{uri.netloc}'.format(
+                    uri=endpoint)
+                webpush(
+                    subscription_info={
+                        "endpoint": admin["endpoint"],
+                        "keys": {
+                            "auth": admin["auth"],
+                            "p256dh": admin["p256dh"],
+                        }
+                    },
+                    data=message,
+                    vapid_private_key=environment.get_vapid_key()[1],
+                    vapid_claims={
+                        "sub": "mailto:bird@example.org",
+                        "aud": endpoint_origin,
+                        "exp": math.floor(
+                            datetime.now().timestamp() + timedelta(days=1).total_seconds()
+                        )
                     }
-                },
-                data=message,
-                vapid_private_key=environment.get_vapid_key()[1],
-                vapid_claims={
-                    "sub": "mailto:bird@example.org",
-                    "aud": endpoint_origin,
-                    "exp": math.floor(
-                        datetime.now().timestamp() + timedelta(days=1).total_seconds()
-                    )
-                }
-            )
-    except WebPushException as err:
+                )
+
+            except WebPushException as err:
+                print(err)
+                print(traceback.format_exc())
+                print("Failed to push notification")
+
+    except Exception as err:
         print(err)
         print(traceback.format_exc())
         print("Failed to push notification")

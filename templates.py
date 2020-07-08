@@ -22,10 +22,8 @@ gmaps = googlemaps.Client(key=environment.get_maps_key())
 
 def system_notification_message(user_name=None):
     return json.dumps({
-        "notification": {
-            "title": f"使用 {user_name} 者需要您的回覆幫助",
-            "body": "請儘速回覆～"
-        }
+        "title": f"使用 {user_name} 者需要您的回覆幫助",
+        "body": "請儘速回覆～"
     })
     # return f"使用者 {user} 傳送了 {message}"
 

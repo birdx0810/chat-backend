@@ -360,10 +360,16 @@ def subscribe():
     try:
         data = request.get_json(force=True)
 
+        token = data["token"]
+
+        if db.check_login(token=token) is None:
+            raise ValueError(f"Invalid token {token}")
+
         db.add_push_info(
             auth=data["auth"],
             endpoint=data["endpoint"],
             p256dh=data["p256dh"],
+            token=token
         )
 
         return flask.Response(status=200)
