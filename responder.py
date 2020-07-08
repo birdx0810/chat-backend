@@ -253,7 +253,7 @@ def registration(event=None, socketio=None, status=None):
             user_id=user_id
         )
         db.update_status(
-            status=status_code.high_temp["API_Called"], user_id=user_id)
+            status=status_code.system["null_state"], user_id=user_id)
     elif status == status_code.registration["error"]:
         send_text(
             event=event,
@@ -420,6 +420,7 @@ def qa(event=None, message=None, socketio=None, status=None):
         )
         db.update_status(
             status=status_code.system["null_state"], user_id=user_id)
+
     elif status == status_code.qa["contact_customer_service"]:
         send_text(
             event=event,
@@ -653,7 +654,7 @@ def high_temp(event=None, message=None, socketio=None, status=None, user_id=None
             )
 
             send_text(
-                event=event,
+                event=None,
                 message=templates.high_temp_asap,
                 require_read=False,
                 socketio=socketio,
