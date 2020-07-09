@@ -48,7 +48,7 @@ def send_frontend(
         socketio=None,
         timestamp=None,
         user_id=None
-    ):
+):
 
     try:
         frontend_data = json.dumps([{
@@ -74,7 +74,7 @@ def send_text(
         require_read=False,
         socketio=None,
         user_id=None
-    ):
+):
     """
     This function wraps the utilties for logging and sending messages
     event is None:  Push messages

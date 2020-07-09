@@ -48,6 +48,7 @@ cors = CORS(app, resources={
     r"/send": {"Access-Control-Allow-Credentials": True},
     r"/message_is_read": {"Access-Control-Allow-Credentials": True},
     r"/subscribe": {"Access-Control-Allow-Credentials": True},
+    r"/unsubscribe": {"Access-Control-Allow-Credentials": True},
 })
 app.config["SERVER_NAME"] = config["server_name"]
 socketio = SocketIO(app, async_mode="eventlet", cors_allowed_origins="*")
@@ -353,6 +354,7 @@ def message_is_read():
 def subscribe():
     """
     API for receiving user-end browser information from frontend
+    for push notifications to admin.
     """
     if request.method == "OPTIONS":
         return flask.Response(status=200)
@@ -379,6 +381,32 @@ def subscribe():
         print(traceback.format_exc())
         return abort(403, "Forbidden: Authentication is bad")
 
+@app.route("/unsubscribe", methods=["POST", "OPTIONS"])
+def unsubscribe():
+    """
+    API for removing push notifications to admin
+    """
+    if request.method == "OPTIONS":
+        return flask.Response(status=200)
+
+    try:
+        data = request.get_json(force=True)
+
+        token = data["token"]
+
+        if db.check_login(token=token) is None:
+            raise ValueError(f"Invalid token {token}")
+
+        db.remove_push_info(
+            token=token
+        )
+
+        return flask.Response(status=200)
+
+    except Exception as err:
+        print(err)
+        print(traceback.format_exc())
+        return abort(403, "Forbidden: Authentication is bad")
 
 #########################
 # socket connection

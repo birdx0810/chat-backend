@@ -519,6 +519,14 @@ def add_push_info(auth=None, endpoint=None, p256dh=None, token=None):
 
     update(qry, (auth, endpoint, p256dh, token))
 
+def remove_push_info(token=None):
+    qry = """
+        UPDATE mb_admin
+        SET    auth=NULL, endpoint=NULL, p256dh=NULL
+        WHERE  token=%s
+    """
+
+    update(qry, (token,))
 
 def get_push_info():
     qry = """
